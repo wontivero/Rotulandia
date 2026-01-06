@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotulandia - Generador de Rótulos</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Fuentes Modernas de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Bangers&family=Dancing+Script:wght@700&family=Fredoka:wght@400;600&family=Lobster&family=Pacifico&family=Permanent+Marker&family=Quicksand:wght@500;700&family=Righteous&family=Roboto+Slab:wght@400;700&family=Satisfy&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Rotulandia 🎨</h1>
+    <p>Crea tus propios rótulos para el colegio.</p>
+
+    <div class="configurador">
+        <!-- Controles para el usuario -->
+        <div class="controles">
+            <h2>1. Elige tus opciones:</h2>
+            <label for="plantilla">Tipo de Rótulo:</label>
+            <select id="plantilla">
+                <option value="cuaderno">Cuaderno (6 x 5 cm)</option>
+                <option value="lapiz">Lápiz (5 x 1 cm)</option>
+                <option value="carpeta">Carpeta (10 x 6 cm)</option>
+                <option value="mix_cuaderno_lapiz">Combo: Cuaderno + Lápiz</option>
+            </select>
+
+            <div class="opcion-grupo">
+                <label>Estilo de Fondo:</label>
+                <select id="tipo-fondo">
+                    <option value="solido">Color Sólido</option>
+                    <option value="degradado">Degradado</option>
+                    <option value="imagen">Subir Imagen (Web/PC)</option>
+                    <option value="transparente">Transparente</option>
+                </select>
+                <div id="control-color-solido">
+                    <input type="color" id="color-fondo" value="#E0F7FA">
+                </div>
+                <div id="control-color-degradado" style="display: none;">
+                    <input type="color" id="color-degradado-1" value="#84FAB0">
+                    <input type="color" id="color-degradado-2" value="#8FD3F4">
+                    <button id="btn-random-gradient" title="Generar colores aleatorios" type="button">🎲 Magia</button>
+                </div>
+                <div id="control-imagen-fondo" style="display: none;">
+                    <!-- Galería de fondos dinámica -->
+                    <div id="galeria-fondos" class="galeria-imagenes">
+                        <label class="boton-subir-imagen" title="Subir nuevo fondo"><input type="file" id="input-nuevo-fondo" accept="image/*, .avif" multiple style="display: none;">➕ Subir</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="opcion-grupo">
+                <label for="tipo-patron">Estampado de Fondo:</label>
+                <select id="tipo-patron">
+                    <option value="ninguno">Liso (Sin estampado)</option>
+                    <option value="puntos">Lunares (Polka Dots)</option>
+                    <option value="rayas">Rayas Diagonales</option>
+                    <option value="cuadricula">Cuaderno (Grid)</option>
+                    <option value="memphis">Memphis (Abstracto Moderno)</option>
+                    <option value="zigzag">Zig-Zag (Divertido)</option>
+                    <option value="confetti">Confeti (Fiesta)</option>
+                    <option value="holografico">Holográfico (Aesthetic)</option>
+                </select>
+            </div>
+
+            <!-- GRUPO: NOMBRE -->
+            <div class="opcion-grupo componente-grupo">
+                <h3>🅰️ Nombre y Apellido</h3>
+                <input type="text" id="nombre" placeholder="Nombre (Ej: Ana)">
+                <input type="text" id="apellido" placeholder="Apellido (Ej: Pérez)">
+                
+                <div class="fila-controles">
+                    <div class="columna-control">
+                        <label>Fuente:</label>
+                        <select id="fuente-nombre">
+                            <option value="'Fredoka', sans-serif">Fredoka</option>
+                            <option value="'Pacifico', cursive">Pacifico</option>
+                            <option value="'Bangers', cursive">Bangers</option>
+                            <option value="'Quicksand', sans-serif">Quicksand</option>
+                            <option value="'Lobster', cursive">Lobster</option>
+                            <option value="'Abril Fatface', cursive">Abril Fatface</option>
+                            <option value="'Roboto Slab', serif">Roboto Slab</option>
+                            <option value="'Permanent Marker', cursive">Permanent Marker</option>
+                            <option value="'Anton', sans-serif">Anton (Impacto)</option>
+                            <option value="'Righteous', cursive">Righteous (Gamer)</option>
+                            <option value="'Dancing Script', cursive">Dancing Script</option>
+                            <option value="'Satisfy', cursive">Satisfy (Brush)</option>
+                        </select>
+                    </div>
+                    <div class="columna-control">
+                        <label>Color:</label>
+                        <input type="color" id="color-nombre" value="#004D40">
+                    </div>
+                </div>
+                
+                <label>Efecto de Texto:</label>
+                <select id="efecto-texto-nombre">
+                    <option value="moderno">Moderno (Borde Blanco)</option>
+                    <option value="clasico">Clásico (Plano)</option>
+                    <option value="neon">Neón Brillante</option>
+                    <option value="retro">Retro 3D</option>
+                    <option value="glitch">Glitch (Distorsión)</option>
+                    <option value="arcoiris">Arcoíris (Multicolor)</option>
+                </select>
+
+                <label>Tamaño: <span id="valor-tamano-nombre">1.0</span></label>
+                <input type="range" id="tamano-nombre" min="0.5" max="2.0" step="0.1" value="1.0">
+            </div>
+
+            <!-- GRUPO: GRADO -->
+            <div class="opcion-grupo componente-grupo">
+                <h3>🅱️ Grado</h3>
+                <input type="text" id="grado" placeholder="Ej: 4to 'A'">
+                <div class="fila-controles">
+                    <div class="columna-control">
+                        <label>Fuente:</label>
+                        <select id="fuente-grado">
+                            <option value="'Fredoka', sans-serif">Fredoka</option>
+                            <option value="'Pacifico', cursive">Pacifico</option>
+                            <option value="'Bangers', cursive">Bangers</option>
+                            <option value="'Quicksand', sans-serif" selected>Quicksand</option>
+                            <option value="'Lobster', cursive">Lobster</option>
+                            <option value="'Abril Fatface', cursive">Abril Fatface</option>
+                            <option value="'Roboto Slab', serif">Roboto Slab</option>
+                            <option value="'Permanent Marker', cursive">Permanent Marker</option>
+                            <option value="'Anton', sans-serif">Anton</option>
+                            <option value="'Righteous', cursive">Righteous</option>
+                            <option value="'Dancing Script', cursive">Dancing Script</option>
+                            <option value="'Satisfy', cursive">Satisfy</option>
+                        </select>
+                    </div>
+                    <div class="columna-control">
+                        <label>Color:</label>
+                        <input type="color" id="color-grado" value="#004D40">
+                    </div>
+                </div>
+
+                <label>Efecto de Texto:</label>
+                <select id="efecto-texto-grado">
+                    <option value="moderno">Moderno (Borde Blanco)</option>
+                    <option value="clasico">Clásico (Plano)</option>
+                    <option value="neon">Neón Brillante</option>
+                    <option value="retro">Retro 3D</option>
+                    <option value="glitch">Glitch (Distorsión)</option>
+                    <option value="arcoiris">Arcoíris (Multicolor)</option>
+                </select>
+
+                <label>Tamaño: <span id="valor-tamano-grado">1.0</span></label>
+                <input type="range" id="tamano-grado" min="0.5" max="2.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="opcion-grupo">
+                <label for="estilo-borde">Estilo del Borde:</label>
+                <select id="estilo-borde">
+                    <option value="simple">Simple (Clásico)</option>
+                    <option value="doble">Doble Línea (Elegante)</option>
+                    <option value="punteado">Costura (Craft)</option>
+                    <option value="neon">Neón / Gamer</option>
+                    <option value="3d">3D Pop (Divertido)</option>
+                    <option value="arcoiris">Arcoíris (Rainbow)</option>
+                    <option value="dashed-color">Línea Discontinua Colorida</option>
+                </select>
+                
+                <label for="color-borde" style="margin-top: 10px;">Color del Borde:</label>
+                <input type="color" id="color-borde" value="#004D40">
+
+                <label for="grosor-borde">Grosor:</label>
+                <input type="range" id="grosor-borde" min="1" max="20" value="5">
+            </div>
+
+            <h3>🧸 Personajes (Haz clic para añadir):</h3>
+            <div id="seleccion-personaje" class="galeria-imagenes">
+                <!-- Las imágenes se cargarán aquí con JavaScript -->
+                <label class="boton-subir-imagen" title="Subir nuevo personaje"><input type="file" id="input-nuevo-personaje" accept="image/*, .avif" style="display: none;">➕</label>
+            </div>
+
+            <!-- Controles para la imagen seleccionada -->
+            <div id="panel-imagen-seleccionada" class="opcion-grupo componente-grupo" style="display: none; border-color: #3498db;">
+                <h3 style="color: #3498db;">⚙️ Editar Personaje Seleccionado</h3>
+                <label>Efecto:</label>
+                <select id="efecto-personaje">
+                    <option value="ninguno">Natural</option>
+                    <option value="sticker">Sticker (Borde Blanco)</option>
+                    <option value="sombra">Sombra 3D</option>
+                    <option value="brillo">Resplandor Mágico</option>
+                    <option value="byn">Blanco y Negro</option>
+                    <option value="sepia">Sepia (Vintage)</option>
+                    <option value="fantasma">Fantasma (Transparente)</option>
+                </select>
+
+                <label>Tamaño:</label>
+                <input type="range" id="escala-personaje" min="0.2" max="3.0" step="0.1" value="1.0">
+                
+                <button id="btn-eliminar-imagen" style="background-color: #e74c3c; margin-top: 10px;">🗑️ Eliminar este personaje</button>
+            </div>
+
+            <div class="opcion-grupo-check">
+                <input type="checkbox" id="con-borde" checked>
+                <label for="con-borde" id="label-con-borde">Añadir borde redondeado</label>
+            </div>
+            <div class="opcion-grupo-check" id="grupo-borde-2" style="display: none;">
+                <input type="checkbox" id="con-borde-2" checked>
+                <label for="con-borde-2">Redondear Lápiz</label>
+            </div>
+
+            <button id="boton-generar" style="display: none;">✨ Previsualizar Rótulo</button>
+        </div>
+
+        <!-- El resultado -->
+        <div class="resultado">
+            <h2>2. Previsualización:</h2>
+            <canvas id="canvas-rotulo"></canvas>
+            <p class="instruccion-mover">💡 Haz clic en un elemento para editarlo y arrástralo para moverlo.</p>
+            <p class="info-pdf">La previsualización puede no tener el tamaño final exacto.</p>
+            <div class="acciones-descarga">
+                <button id="boton-descargar-pdf" class="boton-descarga-oculto">📄 Descargar PDF</button>
+                <button id="boton-descargar-png" class="boton-descarga-oculto">🖼️ Descargar PNG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librería para generar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

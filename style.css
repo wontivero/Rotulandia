@@ -1,0 +1,222 @@
+body {
+    font-family: 'Quicksand', sans-serif; /* Fuente más moderna para la web */
+    background-color: #f4f4f9;
+    color: #333;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: #2c3e50;
+    font-family: 'Fredoka', sans-serif;
+}
+
+.configurador {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start; /* Importante para que sticky funcione */
+}
+
+.controles {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    flex: 1; /* Ocupa el espacio restante */
+}
+
+.resultado {
+    position: sticky; /* ¡Magia! */
+    top: 20px; /* Se queda pegado a 20px del borde superior */
+    flex-basis: 500px; /* Ancho base aumentado para ver mejor */
+    max-height: calc(100vh - 40px); /* Se adapta al alto de la pantalla */
+    overflow-y: auto; /* Permite scroll interno si es necesario */
+}
+
+label, input, button, select {
+    display: block;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+input[type="text"] {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#canvas-rotulo {
+    border: 1px dashed #ccc;
+    border-radius: 8px; /* Para que coincida con el borde redondeado */
+    background-color: #fff;
+    cursor: grab; /* Manito para indicar que se puede mover */
+    max-width: 100%; /* Para que no se salga del contenedor */
+    height: auto; /* Mantiene la proporción */
+}
+
+.galeria-imagenes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.galeria-imagenes img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    background-color: #eee;
+    transition: transform 0.2s;
+}
+
+.galeria-imagenes img:hover {
+    transform: scale(1.1);
+}
+
+.galeria-imagenes img.seleccionado {
+    border-color: #3498db;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+.boton-subir-imagen {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e0e0e0;
+    border: 2px dashed #999;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 20px;
+    color: #555;
+}
+
+.boton-subir-imagen:hover {
+    background-color: #d0d0d0;
+    border-color: #666;
+}
+
+.instruccion-mover {
+    font-size: 0.85em;
+    color: #e67e22;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+.info-pdf {
+    font-size: 0.8em;
+    color: #777;
+    text-align: center;
+}
+
+#boton-descargar-pdf.boton-descarga-oculto {
+    display: none; /* Se mostrará con JS */
+}
+
+#boton-descargar-pdf {
+    background-color: #2ecc71;
+}
+
+#boton-descargar-pdf:hover {
+    background-color: #27ae60;
+}
+
+#boton-descargar-png.boton-descarga-oculto {
+    display: none;
+}
+
+#boton-descargar-png {
+    background-color: #9b59b6;
+}
+
+#boton-descargar-png:hover {
+    background-color: #8e44ad;
+}
+
+.opcion-grupo {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.opcion-grupo label {
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+#control-color-degradado {
+    display: flex;
+    gap: 10px;
+}
+
+#btn-random-gradient {
+    width: auto;
+    padding: 0 15px;
+    background: linear-gradient(45deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    margin-bottom: 0; /* Alinear con los inputs */
+}
+
+.opcion-grupo-check {
+    display: flex;
+    align-items: center;
+}
+.opcion-grupo-check input {
+    width: auto;
+    margin-right: 10px;
+}
+
+.componente-grupo {
+    border-left: 4px solid #ccc;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.componente-grupo h3 {
+    margin-top: 0;
+    font-size: 1.1em;
+    color: #555;
+}
+
+.fila-controles {
+    display: flex;
+    gap: 10px;
+}
+.columna-control {
+    flex: 1;
+}
+
+.acciones-descarga {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.acciones-descarga button {
+    margin-bottom: 0;
+    flex: 1;
+}
