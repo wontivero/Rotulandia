@@ -197,6 +197,31 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
     const btnAgregarQR = document.getElementById('btn-agregar-qr');
     const spinnerCarga = document.getElementById('spinner-carga');
 
+    // --- FUNCIÓN PARA RESALTAR CONTROLES ---
+    function resaltarControles(tipo) {
+        // Remover clase de todos los grupos
+        document.getElementById('grupo-nombre').classList.remove('grupo-destacado');
+        document.getElementById('grupo-grado').classList.remove('grupo-destacado');
+        document.getElementById('panel-imagen-seleccionada').classList.remove('grupo-destacado');
+
+        let elementoDestino = null;
+
+        // Agregar al seleccionado
+        if (tipo === 'nombre') {
+            elementoDestino = document.getElementById('grupo-nombre');
+        } else if (tipo === 'grado') {
+            elementoDestino = document.getElementById('grupo-grado');
+        } else if (tipo === 'imagen') {
+            elementoDestino = document.getElementById('panel-imagen-seleccionada');
+        }
+
+        if (elementoDestino) {
+            elementoDestino.classList.add('grupo-destacado');
+            // Scroll suave para enfocar los controles
+            elementoDestino.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
     // --- FUNCIÓN INTELIGENTE: AJUSTAR TEXTO ---
     // Reduce el tamaño de la fuente hasta que el texto quepa en el ancho disponible
     function ajustarTexto(ctx, texto, maxWidth, fontSizeInicial, fontFamily) {
@@ -306,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
                 indiceImagenSeleccionada = element;
                 selectedTextKey = null; // Deseleccionar texto
                 actualizarPanelImagen();
+                resaltarControles('imagen');
             } else if (typeof element === 'string') {
                 // Es texto (ej: 'nombre_0')
                 selectedTextKey = element;
@@ -323,6 +349,10 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
                     inputTamanoGrado.value = currentScale;
                     spanTamanoGrado.textContent = currentScale;
                 }
+
+                // Resaltar el grupo correspondiente
+                if (type === 'nombre' || type === 'apellido') resaltarControles('nombre');
+                else if (type === 'grado') resaltarControles('grado');
             }
             generarPrevisualizacion(); // Redibujar para mostrar selección
         } else {
@@ -330,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
             indiceImagenSeleccionada = -1;
             selectedTextKey = null;
             actualizarPanelImagen();
+            resaltarControles(null); // Apagar luces
             generarPrevisualizacion();
         }
     });

@@ -276,3 +276,11 @@ button:hover {
     margin-bottom: 0;
     flex: 1;
 }
+
+/* Clase para resaltar el grupo de controles activo */
+.grupo-destacado {
+    border-color: #3498db !important;
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.3) !important;
+    background-color: #f0f8ff !important; /* AliceBlue */
+    transition: all 0.3s ease;
+}
