@@ -50,6 +50,28 @@ select {
     border: 1px solid #ccc;
 }
 
+input[type="color"] {
+    padding: 4px;
+    height: 42px; /* Altura fija para darle relevancia y alinear con los selects */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+/* Contenedor para alinear input color con iconos de extensiones */
+.contenedor-color {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+}
+.contenedor-color input[type="color"] {
+    flex: 1;
+    width: auto;
+    margin-bottom: 0;
+}
+
 button {
     padding: 10px;
     background-color: #3498db;
@@ -71,6 +93,40 @@ button:hover {
     max-width: 100%; /* Para que no se salga del contenedor */
     height: auto; /* Mantiene la proporción */
 }
+
+/* Spinner de carga para fuentes */
+.spinner-oculto {
+    display: none !important;
+}
+
+#spinner-carga {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 8px;
+    color: #555;
+    font-weight: bold;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 .galeria-imagenes {
     display: flex;

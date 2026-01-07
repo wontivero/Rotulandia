@@ -18,10 +18,9 @@
             <h2>1. Elige tus opciones:</h2>
             <label for="plantilla">Tipo de Rótulo:</label>
             <select id="plantilla">
-                <option value="cuaderno">Cuaderno (6 x 5 cm)</option>
-                <option value="lapiz">Lápiz (5 x 1 cm)</option>
-                <option value="carpeta">Carpeta (10 x 6 cm)</option>
-                <option value="mix_cuaderno_lapiz">Combo: Cuaderno + Lápiz</option>
+                <option value="cuaderno">Cuaderno / Carpeta (6.5 x 4.5 cm)</option>
+                <option value="lapiz">Lápiz (4.8 x 3 cm)</option>
+                <option value="mix_cuaderno_lapiz">Combo: Cuaderno + Lápices</option>
             </select>
 
             <div class="opcion-grupo">
@@ -33,11 +32,18 @@
                     <option value="transparente">Transparente</option>
                 </select>
                 <div id="control-color-solido">
-                    <input type="color" id="color-fondo" value="#E0F7FA">
+                    <label>Color de Fondo:</label>
+                    <div class="contenedor-color">
+                        <input type="color" id="color-fondo" value="#E0F7FA">
+                    </div>
                 </div>
                 <div id="control-color-degradado" style="display: none;">
-                    <input type="color" id="color-degradado-1" value="#84FAB0">
-                    <input type="color" id="color-degradado-2" value="#8FD3F4">
+                    <div class="contenedor-color">
+                        <input type="color" id="color-degradado-1" value="#84FAB0">
+                    </div>
+                    <div class="contenedor-color">
+                        <input type="color" id="color-degradado-2" value="#8FD3F4">
+                    </div>
                     <button id="btn-random-gradient" title="Generar colores aleatorios" type="button">🎲 Magia</button>
                 </div>
                 <div id="control-imagen-fondo" style="display: none;">
@@ -65,8 +71,10 @@
             <!-- GRUPO: NOMBRE -->
             <div class="opcion-grupo componente-grupo">
                 <h3>🅰️ Nombre y Apellido</h3>
-                <input type="text" id="nombre" placeholder="Nombre (Ej: Ana)">
-                <input type="text" id="apellido" placeholder="Apellido (Ej: Pérez)">
+                <div class="fila-controles">
+                    <input type="text" id="nombre" placeholder="Nombre (Ej: Ana)" class="columna-control">
+                    <input type="text" id="apellido" placeholder="Apellido (Ej: Pérez)" class="columna-control">
+                </div>
                 
                 <div class="fila-controles">
                     <div class="columna-control">
@@ -88,22 +96,30 @@
                     </div>
                     <div class="columna-control">
                         <label>Color:</label>
-                        <input type="color" id="color-nombre" value="#004D40">
+                        <div class="contenedor-color">
+                            <input type="color" id="color-nombre" value="#004D40">
+                        </div>
                     </div>
                 </div>
                 
-                <label>Efecto de Texto:</label>
-                <select id="efecto-texto-nombre">
-                    <option value="moderno">Moderno (Borde Blanco)</option>
-                    <option value="clasico">Clásico (Plano)</option>
-                    <option value="neon">Neón Brillante</option>
-                    <option value="retro">Retro 3D</option>
-                    <option value="glitch">Glitch (Distorsión)</option>
-                    <option value="arcoiris">Arcoíris (Multicolor)</option>
-                </select>
-
-                <label>Tamaño: <span id="valor-tamano-nombre">1.0</span></label>
-                <input type="range" id="tamano-nombre" min="0.5" max="2.0" step="0.1" value="1.0">
+                <div class="fila-controles">
+                    <div class="columna-control">
+                        <label>Efecto:</label>
+                        <select id="efecto-texto-nombre">
+                            <option value="moderno">Moderno (Borde Blanco)</option>
+                            <option value="moderno_ancho">Moderno (Borde Extra Ancho)</option>
+                            <option value="clasico">Clásico (Plano)</option>
+                            <option value="neon">Neón Brillante</option>
+                            <option value="retro">Retro 3D</option>
+                            <option value="glitch">Glitch (Distorsión)</option>
+                            <option value="arcoiris">Arcoíris (Multicolor)</option>
+                        </select>
+                    </div>
+                    <div class="columna-control">
+                        <label>Tamaño: <span id="valor-tamano-nombre">1.0</span></label>
+                        <input type="range" id="tamano-nombre" min="0.5" max="2.0" step="0.1" value="1.0">
+                    </div>
+                </div>
             </div>
 
             <!-- GRUPO: GRADO -->
@@ -130,44 +146,79 @@
                     </div>
                     <div class="columna-control">
                         <label>Color:</label>
-                        <input type="color" id="color-grado" value="#004D40">
+                        <div class="contenedor-color">
+                            <input type="color" id="color-grado" value="#004D40">
+                        </div>
                     </div>
                 </div>
 
-                <label>Efecto de Texto:</label>
-                <select id="efecto-texto-grado">
-                    <option value="moderno">Moderno (Borde Blanco)</option>
-                    <option value="clasico">Clásico (Plano)</option>
-                    <option value="neon">Neón Brillante</option>
-                    <option value="retro">Retro 3D</option>
-                    <option value="glitch">Glitch (Distorsión)</option>
-                    <option value="arcoiris">Arcoíris (Multicolor)</option>
-                </select>
-
-                <label>Tamaño: <span id="valor-tamano-grado">1.0</span></label>
-                <input type="range" id="tamano-grado" min="0.5" max="2.0" step="0.1" value="1.0">
+                <div class="fila-controles">
+                    <div class="columna-control">
+                        <label>Efecto:</label>
+                        <select id="efecto-texto-grado">
+                            <option value="moderno">Moderno (Borde Blanco)</option>
+                            <option value="moderno_ancho">Moderno (Borde Extra Ancho)</option>
+                            <option value="clasico">Clásico (Plano)</option>
+                            <option value="neon">Neón Brillante</option>
+                            <option value="retro">Retro 3D</option>
+                            <option value="glitch">Glitch (Distorsión)</option>
+                            <option value="arcoiris">Arcoíris (Multicolor)</option>
+                        </select>
+                    </div>
+                    <div class="columna-control">
+                        <label>Tamaño: <span id="valor-tamano-grado">1.0</span></label>
+                        <input type="range" id="tamano-grado" min="0.5" max="2.0" step="0.1" value="1.0">
+                    </div>
+                </div>
             </div>
 
             <div class="opcion-grupo">
-                <label for="estilo-borde">Estilo del Borde:</label>
-                <select id="estilo-borde">
-                    <option value="simple">Simple (Clásico)</option>
-                    <option value="doble">Doble Línea (Elegante)</option>
-                    <option value="punteado">Costura (Craft)</option>
-                    <option value="neon">Neón / Gamer</option>
-                    <option value="3d">3D Pop (Divertido)</option>
-                    <option value="arcoiris">Arcoíris (Rainbow)</option>
-                    <option value="dashed-color">Línea Discontinua Colorida</option>
-                </select>
-                
-                <label for="color-borde" style="margin-top: 10px;">Color del Borde:</label>
-                <input type="color" id="color-borde" value="#004D40">
-
-                <label for="grosor-borde">Grosor:</label>
-                <input type="range" id="grosor-borde" min="1" max="20" value="5">
+                <div class="fila-controles">
+                    <div class="columna-control" style="flex: 2;">
+                        <label for="estilo-borde">Estilo del Borde:</label>
+                        <select id="estilo-borde">
+                            <option value="simple">Simple (Clásico)</option>
+                            <option value="doble">Doble Línea (Elegante)</option>
+                            <option value="punteado">Costura (Craft)</option>
+                            <option value="neon">Neón / Gamer</option>
+                            <option value="3d">3D Pop (Divertido)</option>
+                            <option value="arcoiris">Arcoíris (Rainbow)</option>
+                            <option value="dashed-color">Línea Discontinua Colorida</option>
+                        </select>
+                    </div>
+                    <div class="columna-control">
+                        <label for="color-borde">Color:</label>
+                        <div class="contenedor-color">
+                            <input type="color" id="color-borde" value="#004D40">
+                        </div>
+                    </div>
+                    <div class="columna-control">
+                        <label for="grosor-borde">Grosor:</label>
+                        <input type="range" id="grosor-borde" min="1" max="20" value="5" style="margin-top: 10px;">
+                    </div>
+                </div>
             </div>
 
-            <h3>🧸 Personajes (Haz clic para añadir):</h3>
+            <h3>🎨 Gráficos: Personajes y QR</h3>
+            
+            <!-- GRUPO: CÓDIGO QR (Movido aquí para unificar lógica) -->
+            <div class="opcion-grupo componente-grupo" style="margin-bottom: 15px;">
+                <label>Generar QR de Contacto:</label>
+                <input type="text" id="texto-qr" placeholder="Tu WhatsApp (Ej: 351...)">
+                <div class="fila-controles">
+                    <div class="columna-control">
+                        <label>Color:</label>
+                        <div class="contenedor-color">
+                            <input type="color" id="color-qr" value="#000000">
+                        </div>
+                    </div>
+                    <div class="columna-control">
+                        <label>&nbsp;</label>
+                        <button id="btn-agregar-qr" type="button" style="background-color: #34495e; margin-bottom: 0;">Generar QR</button>
+                    </div>
+                </div>
+            </div>
+
             <div id="seleccion-personaje" class="galeria-imagenes">
                 <!-- Las imágenes se cargarán aquí con JavaScript -->
                 <label class="boton-subir-imagen" title="Subir nuevo personaje"><input type="file" id="input-nuevo-personaje" accept="image/*, .avif" style="display: none;">➕</label>
@@ -175,7 +226,7 @@
 
             <!-- Controles para la imagen seleccionada -->
             <div id="panel-imagen-seleccionada" class="opcion-grupo componente-grupo" style="display: none; border-color: #3498db;">
-                <h3 style="color: #3498db;">⚙️ Editar Personaje Seleccionado</h3>
+                <h3 style="color: #3498db;">⚙️ Editar Personaje o QR Seleccionado</h3>
                 <label>Efecto:</label>
                 <select id="efecto-personaje">
                     <option value="ninguno">Natural</option>
@@ -208,7 +259,13 @@
         <!-- El resultado -->
         <div class="resultado">
             <h2>2. Previsualización:</h2>
-            <canvas id="canvas-rotulo"></canvas>
+            <div id="contenedor-canvas" style="position: relative;">
+                <canvas id="canvas-rotulo"></canvas>
+                <div id="spinner-carga" class="spinner-oculto">
+                    <div class="spinner"></div>
+                    <p>Cargando tipografía...</p>
+                </div>
+            </div>
             <p class="instruccion-mover">💡 Haz clic en un elemento para editarlo y arrástralo para moverlo.</p>
             <p class="info-pdf">La previsualización puede no tener el tamaño final exacto.</p>
             <div class="acciones-descarga">
@@ -220,6 +277,8 @@
 
     <!-- Librería para generar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Librería para generar QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

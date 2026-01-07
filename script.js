@@ -8,66 +8,59 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
     // Medidas en mm para el PDF. DPI (puntos por pulgada) para el canvas.
     const PLANTILLAS = {
         'cuaderno': {
-            nombre: 'Cuaderno',
-            width_mm: 60,  // 6 cm de ancho
-            height_mm: 40, // 4 cm de alto
+            nombre: 'Cuaderno / Carpeta',
+            width_mm: 65,  // 6.5 cm de ancho
+            height_mm: 45, // 4.5 cm de alto
+            margin_mm: 5,  // Margen reducido para que entren 3 por fila (65*3 = 195mm < 200mm util)
             // Posiciones y tamaños relativos al canvas
             layout: (w, h) => ({ // w = width, h = height
-                personaje: { x: w * 0.02, y: h * 0.1, w: h * 0.8, h: h * 0.8 }, // Un poco más a la izquierda
-                nombre: { x: w * 0.42, y: h * 0.35, fontSizeBase: h * 0.22 }, // Usamos fontSizeBase para escalar
+                personaje: { x: w * 0.02, y: h * 0.1, w: h * 0.8, h: h * 0.8 },
+                nombre: { x: w * 0.42, y: h * 0.35, fontSizeBase: h * 0.22 },
                 apellido: { x: w * 0.42, y: h * 0.55, fontSizeBase: h * 0.22 },
                 grado: { x: w * 0.42, y: h * 0.75, fontSizeBase: h * 0.18 }
             })
         },
         'lapiz': {
             nombre: 'Lápiz',
-            width_mm: 50,
-            height_mm: 10,
-            layout: (w, h) => ({ // Este es muy pequeño, lo dejamos con valores fijos por ahora
-                personaje: { x: w * 0.05, y: h * 0.1, w: h * 0.8, h: h * 0.8 },
-                nombre: { x: w * 0.25, y: h * 0.8, fontSizeBase: h * 0.6 },
-                apellido: { x: w * 0.45, y: h * 0.8, fontSizeBase: h * 0.6 },
-                grado: { x: w * 0.7, y: h * 0.8, fontSizeBase: h * 0.6 }
-            })
-        },
-        'carpeta': {
-            nombre: 'Carpeta',
-            width_mm: 100,
-            height_mm: 60,
+            width_mm: 48, // 4.8 cm para que entren 4 columnas
+            height_mm: 30, // 3 cm de alto (para rodear)
+            margin_mm: 5,  // Margen de 5mm para aprovechar la hoja
             layout: (w, h) => ({
                 personaje: { x: w * 0.05, y: h * 0.1, w: h * 0.8, h: h * 0.8 },
-                nombre: { x: w * 0.4, y: h * 0.40, fontSizeBase: h * 0.25 },
-                apellido: { x: w * 0.4, y: h * 0.60, fontSizeBase: h * 0.25 },
-                grado: { x: w * 0.4, y: h * 0.80, fontSizeBase: h * 0.2 }
+                nombre: { x: w * 0.4, y: h * 0.35, fontSizeBase: h * 0.2 },
+                apellido: { x: w * 0.4, y: h * 0.55, fontSizeBase: h * 0.2 },
+                grado: { x: w * 0.4, y: h * 0.75, fontSizeBase: h * 0.15 }
             })
         },
         'mix_cuaderno_lapiz': {
-            nombre: 'Combo: Cuaderno + Lápiz',
-            width_mm: 70, // Ancho del canvas para mostrar ambos
-            height_mm: 70, // Alto del canvas
+            nombre: 'Combo: Cuaderno + Lápices',
+            width_mm: 80, // Ancho del canvas para mostrar ambos
+            height_mm: 90, // Alto del canvas
             is_combo: true,
+            pdf_rows: 3, // 3 filas de etiquetas principales
+            pdf_cols: 3, // 3 por fila
             // Definimos las áreas relativas en mm para recorte y PDF
             areas: [
-                { type: 'cuaderno', x_mm: 5, y_mm: 5, w_mm: 60, h_mm: 40 },
-                { type: 'lapiz', x_mm: 10, y_mm: 50, w_mm: 50, h_mm: 10 }
+                { type: 'cuaderno', x_mm: 5, y_mm: 5, w_mm: 65, h_mm: 45 },
+                { type: 'lapiz', x_mm: 15, y_mm: 55, w_mm: 48, h_mm: 30 }
             ],
             layout: (w, h) => {
                 // w y h son el tamaño del canvas en px.
                 // Calculamos posiciones absolutas para los textos en ambas etiquetas
                 return {
-                    personaje: { x: w * 0.05, y: h * 0.1, w: h * 0.3, h: h * 0.3 }, // Posición por defecto imagen
+                    personaje: { x: w * 0.05, y: h * 0.05, w: h * 0.2, h: h * 0.2 }, // Posición por defecto imagen
                     // Arrays de posiciones para los textos (uno para cada etiqueta)
                     nombre: [
-                        { x: mmToPx(5 + 60 * 0.42), y: mmToPx(5 + 40 * 0.35), fontSizeBase: mmToPx(40 * 0.22) }, // Cuaderno
-                        { x: mmToPx(10 + 50 * 0.25), y: mmToPx(50 + 10 * 0.8), fontSizeBase: mmToPx(10 * 0.6) }   // Lápiz
+                        { x: mmToPx(5 + 65 * 0.42), y: mmToPx(5 + 45 * 0.35), fontSizeBase: mmToPx(45 * 0.22) }, // Cuaderno
+                        { x: mmToPx(15 + 48 * 0.4), y: mmToPx(55 + 30 * 0.35), fontSizeBase: mmToPx(30 * 0.2) }   // Lápiz
                     ],
                     apellido: [
-                        { x: mmToPx(5 + 60 * 0.42), y: mmToPx(5 + 40 * 0.55), fontSizeBase: mmToPx(40 * 0.22) },
-                        { x: mmToPx(10 + 50 * 0.45), y: mmToPx(50 + 10 * 0.8), fontSizeBase: mmToPx(10 * 0.6) }
+                        { x: mmToPx(5 + 65 * 0.42), y: mmToPx(5 + 45 * 0.55), fontSizeBase: mmToPx(45 * 0.22) },
+                        { x: mmToPx(15 + 48 * 0.4), y: mmToPx(55 + 30 * 0.55), fontSizeBase: mmToPx(30 * 0.2) }
                     ],
                     grado: [
-                        { x: mmToPx(5 + 60 * 0.42), y: mmToPx(5 + 40 * 0.75), fontSizeBase: mmToPx(40 * 0.18) },
-                        { x: mmToPx(10 + 50 * 0.7), y: mmToPx(50 + 10 * 0.8), fontSizeBase: mmToPx(10 * 0.6) }
+                        { x: mmToPx(5 + 65 * 0.42), y: mmToPx(5 + 45 * 0.75), fontSizeBase: mmToPx(45 * 0.18) },
+                        { x: mmToPx(15 + 48 * 0.4), y: mmToPx(55 + 30 * 0.75), fontSizeBase: mmToPx(30 * 0.15) }
                     ]
                 };
             }
@@ -98,6 +91,11 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
     let isDragging = false;
     let startX, startY;
     let imagenFondoPropia = null; // Variable para guardar la imagen subida
+    
+    // Variables para redimensionar (Resize)
+    let isResizing = false;
+    let initialResizeDist = 0;
+    let initialScale = 1.0;
 
     // --- FUNCIÓN PARA AGREGAR IMAGEN A GALERÍA ---
     function agregarImagenAGaleria(src, contenedor, esPersonaje = true) {
@@ -194,6 +192,10 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
     const inputEscalaPersonaje = document.getElementById('escala-personaje');
     const panelImagenSeleccionada = document.getElementById('panel-imagen-seleccionada');
     const btnEliminarImagen = document.getElementById('btn-eliminar-imagen');
+    const inputTextoQR = document.getElementById('texto-qr');
+    const inputColorQR = document.getElementById('color-qr');
+    const btnAgregarQR = document.getElementById('btn-agregar-qr');
+    const spinnerCarga = document.getElementById('spinner-carga');
 
     // --- FUNCIÓN INTELIGENTE: AJUSTAR TEXTO ---
     // Reduce el tamaño de la fuente hasta que el texto quepa en el ancho disponible
@@ -260,6 +262,36 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
         const mouseX = (e.clientX - rect.left) * scaleX;
         const mouseY = (e.clientY - rect.top) * scaleY;
 
+        // 1. Verificar si clicamos en un manejador de redimensionamiento (Esquinas)
+        if (window.selectionBox) {
+            const sb = window.selectionBox;
+            const handleSize = 15; // Área de click un poco más grande para facilitar
+            const corners = [
+                {x: sb.x, y: sb.y},
+                {x: sb.x + sb.w, y: sb.y},
+                {x: sb.x, y: sb.y + sb.h},
+                {x: sb.x + sb.w, y: sb.y + sb.h}
+            ];
+            
+            for (const c of corners) {
+                if (mouseX >= c.x - handleSize/2 && mouseX <= c.x + handleSize/2 &&
+                    mouseY >= c.y - handleSize/2 && mouseY <= c.y + handleSize/2) {
+                    
+                    isResizing = true;
+                    const centerX = sb.x + sb.w / 2;
+                    const centerY = sb.y + sb.h / 2;
+                    initialResizeDist = Math.hypot(mouseX - centerX, mouseY - centerY);
+                    
+                    if (sb.type === 'image') {
+                        initialScale = imagenesEnCanvas[sb.index].scale;
+                    } else {
+                        initialScale = offsets[sb.key].scale || 1.0;
+                    }
+                    return; // Detener aquí, estamos redimensionando, no arrastrando
+                }
+            }
+        }
+
         const element = getElementAtPosition(mouseX, mouseY);
         
         if (element !== null) {
@@ -272,10 +304,14 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
             // Si es una imagen, la seleccionamos
             if (typeof element === 'number') {
                 indiceImagenSeleccionada = element;
+                selectedTextKey = null; // Deseleccionar texto
                 actualizarPanelImagen();
             } else if (typeof element === 'string') {
                 // Es texto (ej: 'nombre_0')
                 selectedTextKey = element;
+                indiceImagenSeleccionada = -1; // Deseleccionar imagen
+                actualizarPanelImagen();
+                
                 // Actualizar el slider correspondiente al tamaño actual de este texto
                 const type = element.split('_')[0]; // 'nombre', 'apellido', 'grado'
                 const currentScale = offsets[element] && offsets[element].scale ? offsets[element].scale : 1.0;
@@ -288,17 +324,56 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
                     spanTamanoGrado.textContent = currentScale;
                 }
             }
+            generarPrevisualizacion(); // Redibujar para mostrar selección
+        } else {
+            // 3. Deseleccionar todo si clicamos fuera
+            indiceImagenSeleccionada = -1;
+            selectedTextKey = null;
+            actualizarPanelImagen();
+            generarPrevisualizacion();
         }
     });
 
     canvas.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         
         const mouseX = (e.clientX - rect.left) * scaleX;
         const mouseY = (e.clientY - rect.top) * scaleY;
+
+        // Lógica de redimensionamiento
+        if (isResizing && window.selectionBox) {
+            const sb = window.selectionBox;
+            const centerX = sb.x + sb.w / 2;
+            const centerY = sb.y + sb.h / 2;
+            const currentDist = Math.hypot(mouseX - centerX, mouseY - centerY);
+            
+            if (initialResizeDist < 1) return;
+
+            // Calcular nueva escala basada en la distancia del mouse al centro
+            const newScale = Math.max(0.1, initialScale * (currentDist / initialResizeDist));
+            
+            if (sb.type === 'image') {
+                imagenesEnCanvas[sb.index].scale = newScale;
+                inputEscalaPersonaje.value = newScale;
+            } else {
+                offsets[sb.key].scale = newScale;
+                // Actualizar sliders UI
+                const type = sb.key.split('_')[0];
+                if (type === 'nombre' || type === 'apellido') {
+                    inputTamanoNombre.value = newScale;
+                    spanTamanoNombre.textContent = newScale.toFixed(1);
+                } else if (type === 'grado') {
+                    inputTamanoGrado.value = newScale;
+                    spanTamanoGrado.textContent = newScale.toFixed(1);
+                }
+            }
+            generarPrevisualizacion();
+            return;
+        }
+
+        if (!isDragging) return;
 
         const dx = mouseX - startX;
         const dy = mouseY - startY;
@@ -321,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
 
     const detenerArrastre = () => {
         isDragging = false;
+        isResizing = false;
         draggingElement = null;
         canvas.style.cursor = 'grab';
     };
@@ -444,7 +520,9 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
     }
 
     // --- FUNCIÓN PRINCIPAL DE DIBUJO ---
-    function generarPrevisualizacion() {
+    async function generarPrevisualizacion(isExporting) {
+        const exportMode = (isExporting === true);
+
         // 1. Obtener todos los valores
         const nombre = inputNombre.value;
         const apellido = inputApellido.value;
@@ -458,8 +536,26 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
         const colorBorde = inputColorBorde.value;
         const grosorBorde = parseInt(inputGrosorBorde.value, 10);
 
+        // --- VERIFICACIÓN DE FUENTES ---
+        // Comprobamos si las fuentes seleccionadas están cargadas
+        const fontStringNombre = `20px ${inputFuenteNombre.value}`; // Tamaño dummy para checkear
+        const fontStringGrado = `20px ${inputFuenteGrado.value}`;
+        const fontsToLoad = [];
+
+        if (!document.fonts.check(fontStringNombre)) fontsToLoad.push(document.fonts.load(fontStringNombre));
+        if (!document.fonts.check(fontStringGrado)) fontsToLoad.push(document.fonts.load(fontStringGrado));
+
+        if (fontsToLoad.length > 0) {
+            // Si falta alguna fuente, mostramos spinner y esperamos
+            spinnerCarga.classList.remove('spinner-oculto');
+            await Promise.all(fontsToLoad);
+            spinnerCarga.classList.add('spinner-oculto');
+        }
+        // -------------------------------
+
         // Reiniciar bounding boxes globales
         window.boundingBoxes = {};
+        window.selectionBox = null;
         
         // 2. Ajustar el canvas a las dimensiones de la plantilla
         canvas.width = mmToPx(plantilla.width_mm);
@@ -535,6 +631,36 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
 
             ctx.save();
             
+            // Lógica para limitar la imagen al área correspondiente en modo Combo
+            if (plantilla.is_combo) {
+                const cx = imgData.x + wFinal / 2;
+                const cy = imgData.y + hFinal / 2;
+                
+                // Buscar en qué área cae el centro de la imagen
+                const areaIndex = plantilla.areas.findIndex(a => {
+                    const ax = mmToPx(a.x_mm);
+                    const ay = mmToPx(a.y_mm);
+                    const aw = mmToPx(a.w_mm);
+                    const ah = mmToPx(a.h_mm);
+                    return cx >= ax && cx <= ax + aw && cy >= ay && cy <= ay + ah;
+                });
+
+                if (areaIndex !== -1) {
+                    const area = plantilla.areas[areaIndex];
+                    const usarRedondeo = areaIndex === 0 ? checkboxBorde.checked : checkboxBorde2.checked;
+                    const currentRadio = usarRedondeo ? radio : 0;
+                    
+                    // Aplicar recorte específico para esta área
+                    ctx.beginPath();
+                    const ax = mmToPx(area.x_mm) + margenClip;
+                    const ay = mmToPx(area.y_mm) + margenClip;
+                    const aw = mmToPx(area.w_mm) - margenClip * 2;
+                    const ah = mmToPx(area.h_mm) - margenClip * 2;
+                    ctx.roundRect(ax, ay, aw, ah, [currentRadio]);
+                    ctx.clip();
+                }
+            }
+            
             // Efectos por imagen
             if (imgData.effect === 'sticker') {
                 const s = 3;
@@ -564,6 +690,35 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
 
             ctx.drawImage(imgData.img, imgData.x, imgData.y, wFinal, hFinal);
             ctx.restore();
+
+            // Si está seleccionada, dibujamos un recuadro profesional para indicar selección
+            if (!exportMode && index === indiceImagenSeleccionada) {
+                ctx.save();
+                ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 3]); // Línea punteada
+                ctx.strokeRect(imgData.x, imgData.y, wFinal, hFinal);
+                
+                // Guardar caja de selección para eventos
+                window.selectionBox = { x: imgData.x, y: imgData.y, w: wFinal, h: hFinal, type: 'image', index: index };
+                
+                // Dibujar manejadores en las esquinas (Handles)
+                const handleSize = 8;
+                ctx.fillStyle = '#fff';
+                ctx.setLineDash([]); // Línea sólida para los cuadraditos
+                const corners = [
+                    {x: imgData.x, y: imgData.y}, // Arriba Izq
+                    {x: imgData.x + wFinal, y: imgData.y}, // Arriba Der
+                    {x: imgData.x, y: imgData.y + hFinal}, // Abajo Izq
+                    {x: imgData.x + wFinal, y: imgData.y + hFinal} // Abajo Der
+                ];
+                
+                corners.forEach(c => {
+                    ctx.fillRect(c.x - handleSize/2, c.y - handleSize/2, handleSize, handleSize);
+                    ctx.strokeRect(c.x - handleSize/2, c.y - handleSize/2, handleSize, handleSize);
+                });
+                ctx.restore();
+            }
         });
 
         // --- DIBUJAR TEXTO ---
@@ -598,6 +753,12 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
                 if (efecto === 'moderno') {
                     ctx.strokeStyle = 'white';
                     ctx.lineWidth = 4;
+                    ctx.lineJoin = 'round';
+                    ctx.strokeText(texto, itemX, itemY);
+                    ctx.fillText(texto, itemX, itemY);
+                } else if (efecto === 'moderno_ancho') {
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 10; // Borde mucho más ancho
                     ctx.lineJoin = 'round';
                     ctx.strokeText(texto, itemX, itemY);
                     ctx.fillText(texto, itemX, itemY);
@@ -641,19 +802,45 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
                     ctx.fillText(texto, itemX, itemY);
                 }
                 ctx.restore();
+                
+                const width = ctx.measureText(texto).width;
 
                 // Dibujar indicador de selección si corresponde
-                if (offsetKey === selectedTextKey) {
+                if (!exportMode && offsetKey === selectedTextKey) {
                     ctx.save();
                     ctx.strokeStyle = '#3498db';
-                    ctx.lineWidth = 1;
-                    ctx.setLineDash([4, 2]);
-                    const width = ctx.measureText(texto).width;
-                    ctx.strokeRect(itemX, itemY - fontSize/2, width, fontSize);
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 3]);
+                    
+                    const padding = 4;
+                    const boxX = itemX - padding;
+                    const boxY = itemY - fontSize/2 - padding;
+                    const boxW = width + padding*2;
+                    const boxH = fontSize + padding*2;
+
+                    ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+                    // Guardar caja de selección para eventos
+                    window.selectionBox = { x: boxX, y: boxY, w: boxW, h: boxH, type: 'text', key: offsetKey };
+
+                    // Manejadores para texto
+                    const handleSize = 8;
+                    ctx.fillStyle = '#fff';
+                    ctx.setLineDash([]);
+                    const corners = [
+                        {x: boxX, y: boxY},
+                        {x: boxX + boxW, y: boxY},
+                        {x: boxX, y: boxY + boxH},
+                        {x: boxX + boxW, y: boxY + boxH}
+                    ];
+                    corners.forEach(c => {
+                        ctx.fillRect(c.x - handleSize/2, c.y - handleSize/2, handleSize, handleSize);
+                        ctx.strokeRect(c.x - handleSize/2, c.y - handleSize/2, handleSize, handleSize);
+                    });
+
                     ctx.restore();
                 }
                 
-                const width = ctx.measureText(texto).width;
                 // Guardamos con índice para hit testing
                 window.boundingBoxes[offsetKey] = { x: itemX, y: itemY - fontSize/2, w: width, h: fontSize };
             });
@@ -792,8 +979,8 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
 
     // --- FUNCIÓN PARA GENERAR EL PDF ---
     async function generarPDF() {
-        // Forzar la actualización de la previsualización para tener la última versión
-        generarPrevisualizacion();
+        // Forzar la actualización de la previsualización SIN bordes de selección
+        await generarPrevisualizacion(true);
 
         if (!inputNombre.value && !inputApellido.value) {
             alert('Por favor, elige un personaje y escribe un nombre antes de generar el PDF.');
@@ -817,8 +1004,8 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
             format: 'a4' // Hoja A4 (210 x 297 mm)
         });
 
-        // Margen reducido (5mm) para el combo para aprovechar espacio, 10mm para el resto
-        const margen_mm = plantilla.is_combo ? 5 : 10;
+        // Margen reducido (5mm) para el combo o si la plantilla lo especifica (para que entren 3 por fila)
+        const margen_mm = (plantilla.is_combo || plantilla.margin_mm) ? (plantilla.margin_mm || 5) : 10;
         const anchoPagina_mm = 210;
         const altoPagina_mm = 297;
         const anchoUtil_mm = anchoPagina_mm - (margen_mm * 2);
@@ -848,13 +1035,16 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
             const imgCuaderno = recortarEtiqueta(areaCuaderno);
             const imgLapiz = recortarEtiqueta(areaLapiz);
 
-            const espaciado = 1; // Espaciado reducido a 1mm para que entren más
+            const espaciado = 0.5; // Espaciado reducido a 0.5mm para que entren más
 
-            // 2. Llenar con Cuadernos (aprox 12)
-            // 3 columnas x 4 filas = 12 etiquetas
-            for (let row = 0; row < 4; row++) {
-                for (let col = 0; col < 3; col++) {
-                    if (y + areaCuaderno.h_mm > altoPagina_mm) break;
+            // 2. Llenar con Etiquetas Principales (Cuadernos o Carpetas)
+            // Usamos la configuración de la plantilla o por defecto 4 filas x 3 columnas
+            const rowsMain = plantilla.pdf_rows || 4;
+            const colsMain = plantilla.pdf_cols || 3;
+
+            for (let row = 0; row < rowsMain; row++) {
+                for (let col = 0; col < colsMain; col++) {
+                    if (y + areaCuaderno.h_mm > altoPagina_mm) break; // Seguridad por si se pasa
                     doc.addImage(imgCuaderno, 'PNG', x, y, areaCuaderno.w_mm, areaCuaderno.h_mm);
                     x += areaCuaderno.w_mm + espaciado;
                 }
@@ -863,9 +1053,10 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
             }
 
             // 3. Llenar el resto con Lápices
-            y += 2; // Separación mínima entre grupos
+            y += 1; // Separación mínima entre grupos
             while (y < altoPagina_mm - areaLapiz.h_mm) {
-                while (x < anchoUtil_mm - areaLapiz.w_mm) {
+                // CORRECCIÓN: Usar el ancho total disponible hasta el margen derecho
+                while (x + areaLapiz.w_mm <= anchoPagina_mm - margen_mm) {
                     doc.addImage(imgLapiz, 'PNG', x, y, areaLapiz.w_mm, areaLapiz.h_mm);
                     x += areaLapiz.w_mm + espaciado;
                 }
@@ -875,7 +1066,8 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
         } else {
             // Bucle estándar para plantillas simples
             while (y < altoPagina_mm - plantilla.height_mm) {
-                while (x < anchoUtil_mm - plantilla.width_mm) {
+                // CORRECCIÓN: Permitir llegar hasta el borde derecho real (205mm)
+                while (x + plantilla.width_mm <= anchoPagina_mm - margen_mm) {
                     doc.addImage(dataURL, 'PNG', x, y, plantilla.width_mm, plantilla.height_mm);
                     x += plantilla.width_mm + 2; // +2mm de espacio entre rótulos
                 }
@@ -889,14 +1081,19 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
         // Restaurar el botón
         botonDescargarPDF.textContent = textoOriginalBoton;
         botonDescargarPDF.disabled = false;
+        
+        // Restaurar vista previa con selección
+        await generarPrevisualizacion(false);
     }
 
     // --- FUNCIÓN PARA DESCARGAR PNG ---
-    function descargarPNG() {
+    async function descargarPNG() {
+        await generarPrevisualizacion(true); // Limpiar selección
         const link = document.createElement('a');
         link.download = `Rotulo_${selectPlantilla.value}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+        await generarPrevisualizacion(false); // Restaurar selección
     }
 
     // --- EVENT LISTENERS ---
@@ -971,6 +1168,68 @@ document.addEventListener('DOMContentLoaded', () => { // Asegúrate de que el no
             actualizarPanelImagen();
             generarPrevisualizacion();
         }
+    });
+
+    // --- GENERAR CÓDIGO QR ---
+    btnAgregarQR.addEventListener('click', () => {
+        if (!inputTextoQR.value) {
+            alert('Por favor, escribe un teléfono o texto para el QR.');
+            return;
+        }
+
+        // --- LÓGICA WHATSAPP INTELIGENTE ---
+        const textoIngresado = inputTextoQR.value.trim();
+        // Limpiamos el teléfono (dejamos solo números)
+        const telefonoLimpio = textoIngresado.replace(/\D/g, '');
+        
+        let valorFinalQR = textoIngresado;
+
+        // Si parece un teléfono (tiene al menos 7 números), creamos el link de WhatsApp
+        if (telefonoLimpio.length >= 7) {
+            const nombre = encodeURIComponent(inputNombre.value.trim());
+            const apellido = encodeURIComponent(inputApellido.value.trim());
+            
+            // Construimos la URL absoluta a contacto.html basada en la ubicación actual
+            // Esto funciona tanto en localhost como en GitHub Pages
+            let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+            
+            // OPTIMIZACIÓN: Usamos parámetros cortos (t, n, a) para reducir el tamaño del QR
+            // y solo agregamos nombre/apellido si tienen valor para ahorrar caracteres
+            valorFinalQR = `${baseUrl}contacto.html?t=${telefonoLimpio}`;
+            if (nombre) valorFinalQR += `&n=${nombre}`;
+            if (apellido) valorFinalQR += `&a=${apellido}`;
+        }
+
+        // Usamos la librería QRious
+        const qr = new QRious({
+            value: valorFinalQR,
+            foreground: inputColorQR.value,
+            size: 500, // Alta resolución para que se vea bien al imprimir
+            level: 'L' // Nivel de corrección bajo (menos densidad de puntos, ideal para imprimir chico)
+        });
+
+        const img = new Image();
+        img.src = qr.toDataURL();
+        img.onload = () => {
+            // Agregamos el QR como si fuera un personaje más
+            const plantilla = PLANTILLAS[selectPlantilla.value];
+            const layout = (typeof plantilla.layout === 'function') ? plantilla.layout(canvas.width, canvas.height) : plantilla.layout;
+
+            imagenesEnCanvas.push({
+                img: img,
+                x: layout.personaje.x + 50, // Un poco desplazado
+                y: layout.personaje.y + 50,
+                wBase: 100, // Tamaño base del QR
+                hBase: 100,
+                scale: 1.0,
+                effect: 'ninguno'
+            });
+            
+            // Seleccionar el nuevo QR
+            indiceImagenSeleccionada = imagenesEnCanvas.length - 1;
+            actualizarPanelImagen();
+            generarPrevisualizacion();
+        };
     });
 
     // Para una experiencia más fluida, actualizamos la previsualización al cambiar cualquier cosa
