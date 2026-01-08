@@ -32,33 +32,6 @@ h1, h2 {
     overflow-y: auto; /* Permite scroll interno si es necesario */
 }
 
-label, input, button, select {
-    display: block;
-    width: 100%;
-    margin-bottom: 15px;
-}
-
-input[type="text"] {
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-}
-
-select {
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-}
-
-input[type="color"] {
-    padding: 4px;
-    height: 42px; /* Altura fija para darle relevancia y alinear con los selects */
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-    background-color: #fff;
-}
-
 /* Contenedor para alinear input color con iconos de extensiones */
 .contenedor-color {
     display: flex;
@@ -70,19 +43,6 @@ input[type="color"] {
     flex: 1;
     width: auto;
     margin-bottom: 0;
-}
-
-button {
-    padding: 10px;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-button:hover {
-    background-color: #2980b9;
 }
 
 #canvas-rotulo {
@@ -187,30 +147,6 @@ button:hover {
     text-align: center;
 }
 
-#boton-descargar-pdf.boton-descarga-oculto {
-    display: none; /* Se mostrará con JS */
-}
-
-#boton-descargar-pdf {
-    background-color: #2ecc71;
-}
-
-#boton-descargar-pdf:hover {
-    background-color: #27ae60;
-}
-
-#boton-descargar-png.boton-descarga-oculto {
-    display: none;
-}
-
-#boton-descargar-png {
-    background-color: #9b59b6;
-}
-
-#boton-descargar-png:hover {
-    background-color: #8e44ad;
-}
-
 .opcion-grupo {
     background-color: #f8f9fa;
     padding: 10px;
@@ -228,24 +164,6 @@ button:hover {
     gap: 10px;
 }
 
-#btn-random-gradient {
-    width: auto;
-    padding: 0 15px;
-    background: linear-gradient(45deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    margin-bottom: 0; /* Alinear con los inputs */
-}
-
-.opcion-grupo-check {
-    display: flex;
-    align-items: center;
-}
-.opcion-grupo-check input {
-    width: auto;
-    margin-right: 10px;
-}
-
 .componente-grupo {
     border-left: 4px solid #ccc;
     background-color: #fff;
@@ -256,14 +174,6 @@ button:hover {
     margin-top: 0;
     font-size: 1.1em;
     color: #555;
-}
-
-.fila-controles {
-    display: flex;
-    gap: 10px;
-}
-.columna-control {
-    flex: 1;
 }
 
 .acciones-descarga {
@@ -277,10 +187,71 @@ button:hover {
     flex: 1;
 }
 
+.boton-descarga-oculto {
+    display: none !important;
+}
+
 /* Clase para resaltar el grupo de controles activo */
 .grupo-destacado {
     border-color: #3498db !important;
     box-shadow: 0 0 15px rgba(52, 152, 219, 0.3) !important;
     background-color: #f0f8ff !important; /* AliceBlue */
     transition: all 0.3s ease;
+}
+
+/* Estilo para los sliders (range) para que se vean mejor */
+input[type=range] {
+    height: 25px;
+    -webkit-appearance: none;
+    margin: 10px 0;
+    width: 100%;
+    background: transparent; /* Para que se vea el track personalizado si lo hubiera, o el default de bootstrap */
+    border: none;
+    padding: 0;
+}
+
+input[type=range]:focus {
+    outline: none;
+}
+
+/* Estilo del riel (Track) */
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: #dee2e6; /* Gris visible */
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+}
+
+/* Estilo del botón (Thumb) */
+input[type=range]::-webkit-slider-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #3498db; /* Azul Rotulandia */
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -7px; /* Centrar verticalmente */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    border: 2px solid #fff;
+}
+
+/* Compatibilidad Firefox */
+input[type=range]::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: #dee2e6;
+    border-radius: 4px;
+}
+
+input[type=range]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #3498db;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
