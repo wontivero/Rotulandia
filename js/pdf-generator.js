@@ -80,7 +80,10 @@ export class PDFGenerator {
             }
         }
 
-        doc.save(`Rotulandia - Hoja de ${plantilla.nombre}.pdf`);
+        // Construir nombre de archivo personalizado
+        const nombreArchivo = state.inputNombre ? `${state.inputNombre}-${state.inputApellido || ''}` : 'Rotulandia';
+        // Limpiar caracteres no válidos para nombres de archivo y agregar marca
+        doc.save(`${nombreArchivo.replace(/[^a-z0-9]/gi, '_')}-Rotulandia.com.ar.pdf`);
         boton.textContent = textoOriginal;
         boton.disabled = false;
         await renderer.render(state, false);
@@ -89,7 +92,10 @@ export class PDFGenerator {
     async descargarPNG(renderer, state) {
         await renderer.render(state, true);
         const link = document.createElement('a');
-        link.download = `Rotulo_${state.selectPlantilla}.png`;
+        
+        // Construir nombre de archivo personalizado
+        const nombreArchivo = state.inputNombre ? `${state.inputNombre}-${state.inputApellido || ''}` : 'Rotulandia';
+        link.download = `${nombreArchivo.replace(/[^a-z0-9]/gi, '_')}-Rotulandia.com.ar.png`;
         link.href = renderer.canvas.toDataURL('image/png');
         link.click();
         await renderer.render(state, false);
