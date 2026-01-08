@@ -141,7 +141,7 @@ export class CanvasRenderer {
             inputColorNombre, inputColorGrado, inputTamanoNombre, inputTamanoGrado,
             selectEfectoTextoNombre, selectEfectoTextoGrado,
             inputColorDegradado1, inputColorDegradado2, imagenFondoPropia,
-            imagenesEnCanvas, offsets, indiceImagenSeleccionada, selectedTextKey,
+            fondoProps, imagenesEnCanvas, offsets, indiceImagenSeleccionada, selectedTextKey,
             checkboxBorde, checkboxBorde2
         } = state;
 
@@ -204,10 +204,28 @@ export class CanvasRenderer {
             ctx.fillStyle = degradado;
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         } else if (tipoFondo === 'imagen' && imagenFondoPropia) {
-            const scale = Math.max(this.canvas.width / imagenFondoPropia.width, this.canvas.height / imagenFondoPropia.height);
-            const x = (this.canvas.width / 2) - (imagenFondoPropia.width / 2) * scale;
-            const y = (this.canvas.height / 2) - (imagenFondoPropia.height / 2) * scale;
-            ctx.drawImage(imagenFondoPropia, x, y, imagenFondoPropia.width * scale, imagenFondoPropia.height * scale);
+            // Lógica "Cover" profesional: Ajustar sin deformar
+            const canvasRatio = this.canvas.width / this.canvas.height;
+            // CORRECCIÓN: Usar naturalWidth/Height para obtener las dimensiones reales de la imagen, no las de la miniatura CSS
+            const imgRatio = imagenFondoPropia.naturalWidth / imagenFondoPropia.naturalHeight;
+            
+            let renderW, renderH;
+            
+            if (canvasRatio > imgRatio) {
+                // El canvas es más ancho que la imagen (ajustar al ancho)
+                renderW = this.canvas.width;
+                renderH = renderW / imgRatio;
+            } else {
+                // El canvas es más alto que la imagen (ajustar al alto)
+                renderH = this.canvas.height;
+                renderW = renderH * imgRatio;
+            }
+
+            // Centrar inicialmente + desplazamiento del usuario
+            const x = (this.canvas.width - renderW) / 2 + (fondoProps ? fondoProps.x : 0);
+            const y = (this.canvas.height - renderH) / 2 + (fondoProps ? fondoProps.y : 0);
+            
+            ctx.drawImage(imagenFondoPropia, x, y, renderW, renderH);
         }
 
         this.dibujarPatron(tipoPatron, this.canvas.width, this.canvas.height);

@@ -59,4 +59,14 @@ export const PLANTILLAS = {
     }
 };
 
-export const PERSONAJES = ['laBubu.png', 'stitch.png', 'spiderman.png'];
+export const PERSONAJES = ['laBubu.png', 'stitch.png', 'spiderman.png','stich2.png'];
+
+// MANIFIESTO DE FONDOS
+// Agrega aquí los nombres de los archivos que pongas en la carpeta /fondos
+export const FONDOS = [
+    'rosa.avif',
+    'azul.avif',
+    'spider.webp',
+    '1.jpg',
+    '2.jpg'
+];

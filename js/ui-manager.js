@@ -1,5 +1,5 @@
 // js/ui-manager.js
-import { PERSONAJES, PLANTILLAS } from './config.js';
+import { PERSONAJES, FONDOS, PLANTILLAS } from './config.js';
 
 export class UIManager {
     constructor(renderer, pdfGenerator) {
@@ -10,7 +10,12 @@ export class UIManager {
             indiceImagenSeleccionada: -1,
             offsets: {},
             selectedTextKey: null,
-            imagenFondoPropia: null
+            imagenFondoPropia: null,
+            fondoProps: { // Propiedades para manejar la posición y escala del fondo
+                x: 0,
+                y: 0,
+                scale: 1
+            }
         };
         
         this.isDragging = false;
@@ -118,6 +123,9 @@ export class UIManager {
             this.elements.controlDegradado.style.display = (this.elements.selectTipoFondo.value === 'degradado') ? 'flex' : 'none';
             this.elements.controlImagenFondo.style.display = (this.elements.selectTipoFondo.value === 'imagen') ? 'block' : 'none';
         });
+        
+        // Disparar evento inicial para configurar la vista correcta (ya que cambiamos el default a 'imagen')
+        this.elements.selectTipoFondo.dispatchEvent(new Event('input'));
 
         this.elements.selectPlantilla.addEventListener('change', () => {
             this.state.offsets = {};
@@ -191,6 +199,11 @@ export class UIManager {
         PERSONAJES.forEach((nombreArchivo) => {
             this.agregarImagenAGaleria(`personajes/${nombreArchivo}`, this.elements.galeria, true);
         });
+
+        FONDOS.forEach((nombreArchivo) => {
+            this.agregarImagenAGaleria(`fondos/${nombreArchivo}`, this.elements.galeriaFondos, false);
+        });
+
         document.fonts.ready.then(() => this.updatePreview());
     }
 
@@ -234,6 +247,11 @@ export class UIManager {
                 document.querySelectorAll('#galeria-fondos img').forEach(el => el.classList.remove('seleccionado'));
                 img.classList.add('seleccionado');
                 this.state.imagenFondoPropia = img;
+                // Resetear posición del fondo al cambiarlo
+                this.state.fondoProps = { x: 0, y: 0, scale: 1 };
+                // Cambiar a modo imagen automáticamente si no lo estaba
+                this.elements.selectTipoFondo.value = 'imagen';
+                this.elements.selectTipoFondo.dispatchEvent(new Event('input'));
             }
             this.updatePreview();
         });
@@ -268,9 +286,9 @@ export class UIManager {
             const nombre = encodeURIComponent(this.elements.inputNombre.value.trim());
             const apellido = encodeURIComponent(this.elements.inputApellido.value.trim());
             let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-            valorFinalQR = `contacto.html?t=`;
-            if (nombre) valorFinalQR += `&n=`;
-            if (apellido) valorFinalQR += `&a=`;
+            valorFinalQR = `${baseUrl}contacto.html?t=${telefonoLimpio}`;
+            if (nombre) valorFinalQR += `&n=${nombre}`;
+            if (apellido) valorFinalQR += `&a=${apellido}`;
         }
 
         const qr = new QRious({
@@ -377,6 +395,13 @@ export class UIManager {
             }
         }
 
+        // 2. Verificar si estamos arrastrando el fondo (si está en modo imagen)
+        if (this.elements.selectTipoFondo.value === 'imagen' && this.state.imagenFondoPropia) {
+            // Si no clicamos en nada más, asumimos que queremos mover el fondo
+            // Pero solo si no hay otro elemento seleccionado o clicamos fuera de él
+            // Para simplificar: si getElementAtPosition devuelve null, movemos el fondo
+        }
+
         const element = this.getElementAtPosition(mouseX, mouseY);
         if (element !== null) {
             this.isDragging = true;
@@ -408,6 +433,14 @@ export class UIManager {
             }
             this.updatePreview();
         } else {
+            // Si no clicamos en ningún elemento y estamos en modo imagen, arrastramos el fondo
+            if (this.elements.selectTipoFondo.value === 'imagen' && this.state.imagenFondoPropia) {
+                this.isDragging = true;
+                this.draggingElement = 'fondo'; // Identificador especial
+                this.startX = mouseX;
+                this.startY = mouseY;
+                this.renderer.canvas.style.cursor = 'grabbing';
+            }
             this.state.indiceImagenSeleccionada = -1;
             this.state.selectedTextKey = null;
             this.actualizarPanelImagen();
@@ -452,7 +485,10 @@ export class UIManager {
         const dx = mouseX - this.startX;
         const dy = mouseY - this.startY;
 
-        if (typeof this.draggingElement === 'string') {
+        if (this.draggingElement === 'fondo') {
+            this.state.fondoProps.x += dx;
+            this.state.fondoProps.y += dy;
+        } else if (typeof this.draggingElement === 'string') {
             if (!this.state.offsets[this.draggingElement]) this.state.offsets[this.draggingElement] = { x: 0, y: 0, scale: 1.0 };
             this.state.offsets[this.draggingElement].x += dx;
             this.state.offsets[this.draggingElement].y += dy;
