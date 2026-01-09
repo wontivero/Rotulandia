@@ -44,12 +44,26 @@ export class UIManager {
             inputColorDegradado2: document.getElementById('color-degradado-2'),
             inputFuenteNombre: document.getElementById('fuente-nombre'),
             inputColorNombre: document.getElementById('color-nombre'),
+            checkArcoirisNombre: document.getElementById('check-arcoiris-nombre'),
+            inputShiftArcoirisNombre: document.getElementById('shift-arcoiris-nombre'),
+            controlArcoirisNombre: document.getElementById('control-arcoiris-nombre'),
+            checkMetalNombre: document.getElementById('check-metal-nombre'),
+            inputTipoMetalNombre: document.getElementById('tipo-metal-nombre'),
+            controlMetalNombre: document.getElementById('control-metal-nombre'),
             selectEfectoTextoNombre: document.getElementById('efecto-texto-nombre'),
+            inputIntensidadEfectoNombre: document.getElementById('intensidad-efecto-nombre'),
             inputTamanoNombre: document.getElementById('tamano-nombre'),
             spanTamanoNombre: document.getElementById('valor-tamano-nombre'),
             inputFuenteGrado: document.getElementById('fuente-grado'),
             inputColorGrado: document.getElementById('color-grado'),
             selectEfectoTextoGrado: document.getElementById('efecto-texto-grado'),
+            checkArcoirisGrado: document.getElementById('check-arcoiris-grado'),
+            inputShiftArcoirisGrado: document.getElementById('shift-arcoiris-grado'),
+            controlArcoirisGrado: document.getElementById('control-arcoiris-grado'),
+            checkMetalGrado: document.getElementById('check-metal-grado'),
+            inputTipoMetalGrado: document.getElementById('tipo-metal-grado'),
+            controlMetalGrado: document.getElementById('control-metal-grado'),
+            inputIntensidadEfectoGrado: document.getElementById('intensidad-efecto-grado'),
             inputTamanoGrado: document.getElementById('tamano-grado'),
             spanTamanoGrado: document.getElementById('valor-tamano-grado'),
             selectPlantilla: document.getElementById('plantilla'),
@@ -58,11 +72,22 @@ export class UIManager {
             selectEstiloBorde: document.getElementById('estilo-borde'),
             inputColorBorde: document.getElementById('color-borde'),
             inputGrosorBorde: document.getElementById('grosor-borde'),
+            checkArcoirisBorde: document.getElementById('check-arcoiris-borde'),
+            inputShiftArcoirisBorde: document.getElementById('shift-arcoiris-borde'),
+            controlArcoirisBorde: document.getElementById('control-arcoiris-borde'),
+            checkMetalBorde: document.getElementById('check-metal-borde'),
+            inputTipoMetalBorde: document.getElementById('tipo-metal-borde'),
+            controlMetalBorde: document.getElementById('control-metal-borde'),
+            selectEfectoBorde: document.getElementById('efecto-borde'),
+            inputIntensidadEfectoBorde: document.getElementById('intensidad-efecto-borde'),
             inputNuevoFondo: document.getElementById('input-nuevo-fondo'),
             inputNuevoPersonaje: document.getElementById('input-nuevo-personaje'),
             selectEfectoPersonaje: document.getElementById('efecto-personaje'),
+            inputIntensidadEfectoPersonaje: document.getElementById('intensidad-efecto-personaje'),
             checkboxBorde: document.getElementById('con-borde'),
             checkboxBorde2: document.getElementById('con-borde-2'),
+            inputRadioBorde: document.getElementById('radio-borde'),
+            controlRadioBorde: document.getElementById('control-radio-borde'),
             grupoBorde2: document.getElementById('grupo-borde-2'),
             labelConBorde: document.getElementById('label-con-borde'),
             controlSolido: document.getElementById('control-color-solido'),
@@ -114,7 +139,14 @@ export class UIManager {
             'selectTipoFondo', 'inputColorDegradado1', 'inputColorDegradado2', 'checkboxBorde', 'checkboxBorde2',
             'selectTipoPatron', 'selectEstiloBorde', 'inputColorBorde', 'inputGrosorBorde',
             'inputFuenteNombre', 'inputColorNombre', 'selectEfectoTextoNombre',
-            'inputFuenteGrado', 'inputColorGrado', 'selectEfectoTextoGrado'
+            'inputFuenteGrado', 'inputColorGrado', 'selectEfectoTextoGrado',
+            'inputIntensidadEfectoNombre', 'inputIntensidadEfectoGrado',
+            'checkArcoirisNombre', 'checkArcoirisGrado',
+            'inputShiftArcoirisNombre', 'inputShiftArcoirisGrado',
+            'checkMetalNombre', 'checkMetalGrado', 'inputTipoMetalNombre', 'inputTipoMetalGrado',
+            'checkArcoirisBorde', 'inputShiftArcoirisBorde', 'checkMetalBorde', 'inputTipoMetalBorde',
+            'selectEfectoBorde', 'inputIntensidadEfectoBorde',
+            'inputRadioBorde'
         ];
 
         interactiveElements.forEach(key => {
@@ -124,6 +156,49 @@ export class UIManager {
         });
 
         this.elements.botonGenerar.addEventListener('click', () => this.updatePreview());
+        
+        // Lógica para mostrar/ocultar controles de arcoíris
+        this.elements.checkArcoirisNombre.addEventListener('input', () => {
+            if (this.elements.checkArcoirisNombre.checked) this.elements.checkMetalNombre.checked = false;
+            this.toggleColorControls();
+            this.updatePreview();
+        });
+        this.elements.checkArcoirisGrado.addEventListener('input', () => {
+            if (this.elements.checkArcoirisGrado.checked) this.elements.checkMetalGrado.checked = false;
+            this.toggleColorControls();
+            this.updatePreview();
+        });
+
+        // Lógica para mostrar/ocultar controles de metal
+        this.elements.checkMetalNombre.addEventListener('input', () => {
+            if (this.elements.checkMetalNombre.checked) this.elements.checkArcoirisNombre.checked = false;
+            this.toggleColorControls();
+            this.updatePreview();
+        });
+        this.elements.checkMetalGrado.addEventListener('input', () => {
+            if (this.elements.checkMetalGrado.checked) this.elements.checkArcoirisGrado.checked = false;
+            this.toggleColorControls();
+            this.updatePreview();
+        });
+
+        // Lógica para borde
+        this.elements.checkArcoirisBorde.addEventListener('input', () => {
+            if (this.elements.checkArcoirisBorde.checked) this.elements.checkMetalBorde.checked = false;
+            this.toggleColorControls();
+            this.updatePreview();
+        });
+        this.elements.checkMetalBorde.addEventListener('input', () => {
+            if (this.elements.checkMetalBorde.checked) this.elements.checkArcoirisBorde.checked = false;
+            this.toggleColorControls();
+            this.updatePreview();
+        });
+        
+        // Lógica para mostrar/ocultar control de radio de borde
+        this.elements.checkboxBorde.addEventListener('change', () => {
+            this.elements.controlRadioBorde.style.display = this.elements.checkboxBorde.checked ? 'block' : 'none';
+            this.updatePreview();
+        });
+
         this.elements.btnRandomGradient.addEventListener('click', () => this.generarColorRandom());
         
         this.elements.selectTipoFondo.addEventListener('input', () => {
@@ -168,6 +243,13 @@ export class UIManager {
         this.elements.selectEfectoPersonaje.addEventListener('input', (e) => {
             if (this.state.indiceImagenSeleccionada >= 0) {
                 this.state.imagenesEnCanvas[this.state.indiceImagenSeleccionada].effect = e.target.value;
+                this.updatePreview();
+            }
+        });
+
+        this.elements.inputIntensidadEfectoPersonaje.addEventListener('input', (e) => {
+            if (this.state.indiceImagenSeleccionada >= 0) {
+                this.state.imagenesEnCanvas[this.state.indiceImagenSeleccionada].effectIntensity = parseInt(e.target.value, 10);
                 this.updatePreview();
             }
         });
@@ -258,7 +340,8 @@ export class UIManager {
                     wBase: layout.personaje.w,
                     hBase: layout.personaje.h,
                     scale: 1.0,
-                    effect: 'ninguno'
+                    effect: 'ninguno',
+                    effectIntensity: 5
                 });
                 this.state.indiceImagenSeleccionada = this.state.imagenesEnCanvas.length - 1;
                 this.actualizarPanelImagen();
@@ -290,6 +373,15 @@ export class UIManager {
         this.elements.inputColorDegradado2.value = randomPalette.c2;
         this.elements.inputColorFondo.value = randomPalette.c1;
         this.updatePreview();
+    }
+
+    toggleColorControls() {
+        this.elements.controlArcoirisNombre.style.display = this.elements.checkArcoirisNombre.checked ? 'block' : 'none';
+        this.elements.controlArcoirisGrado.style.display = this.elements.checkArcoirisGrado.checked ? 'block' : 'none';
+        this.elements.controlMetalNombre.style.display = this.elements.checkMetalNombre.checked ? 'block' : 'none';
+        this.elements.controlMetalGrado.style.display = this.elements.checkMetalGrado.checked ? 'block' : 'none';
+        this.elements.controlArcoirisBorde.style.display = this.elements.checkArcoirisBorde.checked ? 'block' : 'none';
+        this.elements.controlMetalBorde.style.display = this.elements.checkMetalBorde.checked ? 'block' : 'none';
     }
 
     // --- SISTEMA DE NOTIFICACIONES MODERNO ---
@@ -504,6 +596,7 @@ export class UIManager {
                 hBase: 100,
                 scale: 1.0,
                 effect: 'ninguno',
+                effectIntensity: 5,
                 isQR: true, // Marcamos esta imagen como un QR
                 qrId: qrId // Guardamos el ID de Firestore para validaciones
             });
@@ -567,6 +660,13 @@ export class UIManager {
             const imgData = this.state.imagenesEnCanvas[this.state.indiceImagenSeleccionada];
             this.elements.inputEscalaPersonaje.value = imgData.scale;
             this.elements.selectEfectoPersonaje.value = imgData.effect;
+            this.elements.inputIntensidadEfectoPersonaje.value = imgData.effectIntensity !== undefined ? imgData.effectIntensity : 5;
+
+            if (imgData.isQR) {
+                this.elements.btnEliminarImagen.textContent = "🗑️ Eliminar QR del diseño";
+            } else {
+                this.elements.btnEliminarImagen.textContent = "🗑️ Eliminar este personaje";
+            }
         } else {
             this.elements.panelImagenSeleccionada.style.display = 'none';
         }

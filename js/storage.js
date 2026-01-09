@@ -74,13 +74,30 @@ export class StorageManager {
                 estiloBorde: state.selectEstiloBorde,
                 colorBorde: state.inputColorBorde,
                 grosorBorde: state.inputGrosorBorde,
+                arcoirisBorde: state.checkArcoirisBorde,
+                shiftArcoirisBorde: state.inputShiftArcoirisBorde,
+                metalBorde: state.checkMetalBorde,
+                tipoMetalBorde: state.inputTipoMetalBorde,
+                efectoBorde: state.selectEfectoBorde,
+                intensidadEfectoBorde: state.inputIntensidadEfectoBorde,
+                radioBorde: state.inputRadioBorde,
                 fuenteNombre: state.inputFuenteNombre,
                 colorNombre: state.inputColorNombre,
+                arcoirisNombre: state.checkArcoirisNombre,
+                shiftArcoirisNombre: state.inputShiftArcoirisNombre,
+                metalNombre: state.checkMetalNombre,
+                tipoMetalNombre: state.inputTipoMetalNombre,
                 efectoTextoNombre: state.selectEfectoTextoNombre,
+                intensidadEfectoNombre: state.inputIntensidadEfectoNombre,
                 tamanoNombre: state.inputTamanoNombre,
                 fuenteGrado: state.inputFuenteGrado,
                 colorGrado: state.inputColorGrado,
+                arcoirisGrado: state.checkArcoirisGrado,
+                shiftArcoirisGrado: state.inputShiftArcoirisGrado,
+                metalGrado: state.checkMetalGrado,
+                tipoMetalGrado: state.inputTipoMetalGrado,
                 efectoTextoGrado: state.selectEfectoTextoGrado,
+                intensidadEfectoGrado: state.inputIntensidadEfectoGrado,
                 tamanoGrado: state.inputTamanoGrado,
                 colorDegradado1: state.inputColorDegradado1,
                 colorDegradado2: state.inputColorDegradado2,
@@ -474,15 +491,32 @@ export class StorageManager {
         elements.selectEstiloBorde.value = config.estiloBorde || 'simple';
         elements.inputColorBorde.value = config.colorBorde || '#004D40';
         elements.inputGrosorBorde.value = config.grosorBorde || 5;
+        elements.checkArcoirisBorde.checked = config.arcoirisBorde || false;
+        elements.inputShiftArcoirisBorde.value = config.shiftArcoirisBorde || 0;
+        elements.checkMetalBorde.checked = config.metalBorde || false;
+        elements.inputTipoMetalBorde.value = config.tipoMetalBorde || 0;
+        elements.selectEfectoBorde.value = config.efectoBorde || 'ninguno';
+        elements.inputIntensidadEfectoBorde.value = config.intensidadEfectoBorde || 5;
+        elements.inputRadioBorde.value = config.radioBorde || 10;
         
         elements.inputFuenteNombre.value = config.fuenteNombre;
         elements.inputColorNombre.value = config.colorNombre;
+        elements.checkArcoirisNombre.checked = config.arcoirisNombre || false;
+        elements.inputShiftArcoirisNombre.value = config.shiftArcoirisNombre || 0;
+        elements.checkMetalNombre.checked = config.metalNombre || false;
+        elements.inputTipoMetalNombre.value = config.tipoMetalNombre || 0;
         elements.selectEfectoTextoNombre.value = config.efectoTextoNombre;
+        elements.inputIntensidadEfectoNombre.value = config.intensidadEfectoNombre || 5;
         elements.inputTamanoNombre.value = config.tamanoNombre || 1.0;
         
         elements.inputFuenteGrado.value = config.fuenteGrado;
         elements.inputColorGrado.value = config.colorGrado;
+        elements.checkArcoirisGrado.checked = config.arcoirisGrado || false;
+        elements.inputShiftArcoirisGrado.value = config.shiftArcoirisGrado || 0;
+        elements.checkMetalGrado.checked = config.metalGrado || false;
+        elements.inputTipoMetalGrado.value = config.tipoMetalGrado || 0;
         elements.selectEfectoTextoGrado.value = config.efectoTextoGrado;
+        elements.inputIntensidadEfectoGrado.value = config.intensidadEfectoGrado || 5;
         elements.inputTamanoGrado.value = config.tamanoGrado || 1.0;
         
         elements.inputColorDegradado1.value = config.colorDegradado1;
@@ -490,6 +524,9 @@ export class StorageManager {
         
         elements.checkboxBorde.checked = config.conBorde;
         if (config.conBorde2 !== undefined) elements.checkboxBorde2.checked = config.conBorde2;
+        
+        // Actualizar visibilidad del control de radio
+        elements.checkboxBorde.dispatchEvent(new Event('change'));
         
         // Restaurar plantilla (dispara evento change, así que cuidado con resetear estado)
         // Usamos un valor por defecto si viene vacío para evitar errores
@@ -539,6 +576,9 @@ export class StorageManager {
         // Disparar eventos para actualizar UI visualmente (mostrar/ocultar paneles)
         elements.selectTipoFondo.dispatchEvent(new Event('input'));
         
+        // Actualizar visibilidad de controles arcoíris
+        this.uiManager.toggleColorControls();
+
         // Actualizar vista previa final
         setTimeout(() => this.uiManager.updatePreview(), 100); // Pequeño delay para asegurar carga
         

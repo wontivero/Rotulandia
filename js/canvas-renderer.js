@@ -140,9 +140,16 @@ export class CanvasRenderer {
             inputFuenteNombre, inputFuenteGrado,
             inputColorNombre, inputColorGrado, inputTamanoNombre, inputTamanoGrado,
             selectEfectoTextoNombre, selectEfectoTextoGrado,
+            checkArcoirisNombre, checkArcoirisGrado,
+            checkMetalNombre, checkMetalGrado, inputTipoMetalNombre, inputTipoMetalGrado,
+            inputShiftArcoirisNombre, inputShiftArcoirisGrado,
+            inputIntensidadEfectoNombre, inputIntensidadEfectoGrado,
             inputColorDegradado1, inputColorDegradado2, imagenFondoPropia,
             fondoProps, imagenesEnCanvas, offsets, indiceImagenSeleccionada, selectedTextKey,
-            checkboxBorde, checkboxBorde2
+            checkboxBorde, checkboxBorde2,
+            checkArcoirisBorde, inputShiftArcoirisBorde, checkMetalBorde, inputTipoMetalBorde,
+            selectEfectoBorde, inputIntensidadEfectoBorde,
+            inputRadioBorde
         } = state;
 
         // Protección contra plantilla indefinida (fallback a 'cuaderno')
@@ -174,7 +181,9 @@ export class CanvasRenderer {
 
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const radio = this.canvas.height * 0.1;
+        // Calcular radio basado en el slider (0-50%)
+        const radioFactor = parseInt(inputRadioBorde || 10, 10) / 100;
+        const radio = Math.min(this.canvas.width, this.canvas.height) * radioFactor;
         const margenClip = 3;
 
         ctx.save();
@@ -265,23 +274,27 @@ export class CanvasRenderer {
                 }
             }
 
+            const intensity = imgData.effectIntensity !== undefined ? imgData.effectIntensity : 5;
+
             if (imgData.effect === 'sticker') {
-                const s = 3;
-                ctx.filter = `drop-shadow(px 0 0 white) drop-shadow(-px 0 0 white) drop-shadow(0 px 0 white) drop-shadow(0 -px 0 white)`;
-            } else if (imgData.effect === 'sombra') {
+                const s = Math.max(1, intensity * 0.8);
+                ctx.filter = `drop-shadow(${s}px 0 0 white) drop-shadow(-${s}px 0 0 white) drop-shadow(0 ${s}px 0 white) drop-shadow(0 -${s}px 0 white)`;
+            } else if (imgData.effect === 'sombra_pop') {
                 ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetX = 5;
-                ctx.shadowOffsetY = 5;
-            } else if (imgData.effect === 'brillo') {
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = intensity;
+                ctx.shadowOffsetY = intensity;
+            } else if (imgData.effect === 'glow') {
                 ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
-                ctx.shadowBlur = 25;
-            } else if (imgData.effect === 'byn') {
-                ctx.filter = 'grayscale(100%)';
-            } else if (imgData.effect === 'sepia') {
-                ctx.filter = 'sepia(100%)';
+                ctx.shadowBlur = intensity * 3;
+            } else if (imgData.effect === 'holografico') {
+                ctx.filter = `hue-rotate(${intensity * 18}deg)`;
+            } else if (imgData.effect === 'vibrante') {
+                ctx.filter = `saturate(${100 + (intensity * 10)}%)`;
+            } else if (imgData.effect === 'vintage') {
+                ctx.filter = `sepia(${intensity * 5}%)`;
             } else if (imgData.effect === 'fantasma') {
-                ctx.globalAlpha = 0.6;
+                ctx.globalAlpha = Math.max(0.1, 1 - (intensity / 25));
             }
 
             ctx.drawImage(imgData.img, imgData.x, imgData.y, wFinal, hFinal);
@@ -296,10 +309,10 @@ export class CanvasRenderer {
         ctx.textBaseline = 'middle';
         const maxTextWidth = 10000;
 
-        const dibujarElementoTexto = (key, texto, inputColor, inputFuente, inputTamano, selectEfecto, isGrado = false) => {
+        const dibujarElementoTexto = (key, texto, inputColor, inputFuente, inputTamano, selectEfecto, intensidadInput, isArcoirisColor, arcoirisShiftInput, isMetalColor, metalTypeInput, isGrado = false) => {
             const items = Array.isArray(layout[key]) ? layout[key] : [layout[key]];
             items.forEach((item, index) => {
-                ctx.fillStyle = inputColor;
+                // ctx.fillStyle se define más abajo dependiendo del modo arcoíris
                 const scaleFactor = (isGrado && inputFuente.includes('Bangers')) ? 0.8 : 1;
                 const offsetKey = `${key}_${index}`;
                 if (!offsets[offsetKey]) offsets[offsetKey] = { x: 0, y: 0, scale: 1.0 };
@@ -309,34 +322,117 @@ export class CanvasRenderer {
                 const scale = offsets[offsetKey].scale || 1.0;
                 const fontSize = this.ajustarTexto(texto, maxTextWidth, item.fontSizeBase * scaleFactor * scale, inputFuente);
                 const efecto = selectEfecto;
+                // Intensidad base 5. Normalizamos para que sea un multiplicador útil
+                const intensidad = parseInt(intensidadInput || 5, 10);
+                
+                // Definir el estilo de relleno base (Color sólido o Arcoíris estático)
+                let baseFillStyle = inputColor;
+                if (isArcoirisColor) {
+                    const width = ctx.measureText(texto).width;
+                    const gradient = ctx.createLinearGradient(itemX, 0, itemX + width, 0);
+                    // Rotación de colores basada en el slider (0 a 360)
+                    const shift = parseInt(arcoirisShiftInput || 0, 10);
+                    for (let i = 0; i <= 10; i++) {
+                        const p = i / 10;
+                        const hue = (p * 360 + shift) % 360;
+                        gradient.addColorStop(p, `hsl(${hue}, 100%, 50%)`);
+                    }
+                    baseFillStyle = gradient;
+                } else if (isMetalColor) {
+                    // Modo Metálico
+                    const fontSize = item.fontSizeBase * scaleFactor * scale;
+                    const gradient = ctx.createLinearGradient(itemX, itemY - fontSize/2, itemX, itemY + fontSize/2);
+                    const type = parseInt(metalTypeInput || 0, 10);
+                    
+                    if (type === 0) { // Oro
+                        gradient.addColorStop(0, "#FDB931"); gradient.addColorStop(0.3, "#FFFFAC");
+                        gradient.addColorStop(0.6, "#D19C1D"); gradient.addColorStop(1, "#C58808");
+                    } else if (type === 1) { // Plata
+                        gradient.addColorStop(0, "#E0E0E0"); gradient.addColorStop(0.3, "#FFFFFF");
+                        gradient.addColorStop(0.6, "#A0A0A0"); gradient.addColorStop(1, "#505050");
+                    } else if (type === 2) { // Bronce
+                        gradient.addColorStop(0, "#e8c39e"); gradient.addColorStop(0.3, "#ffdfc4");
+                        gradient.addColorStop(0.6, "#cd7f32"); gradient.addColorStop(1, "#8c5620");
+                    } else { // Rosa
+                        gradient.addColorStop(0, "#F6D3C5"); gradient.addColorStop(0.3, "#FFF0E8");
+                        gradient.addColorStop(0.6, "#D69E8E"); gradient.addColorStop(1, "#B57B6A");
+                    }
+                    baseFillStyle = gradient;
+                }
 
                 ctx.save();
                 if (efecto === 'moderno') {
-                    ctx.strokeStyle = 'white'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
-                    ctx.strokeText(texto, itemX, itemY); ctx.fillText(texto, itemX, itemY);
+                    ctx.strokeStyle = 'white'; ctx.lineWidth = Math.max(1, intensidad); ctx.lineJoin = 'round';
+                    ctx.strokeText(texto, itemX, itemY); 
+                    ctx.fillStyle = baseFillStyle; ctx.fillText(texto, itemX, itemY);
                 } else if (efecto === 'moderno_ancho') {
-                    ctx.strokeStyle = 'white'; ctx.lineWidth = 10; ctx.lineJoin = 'round';
-                    ctx.strokeText(texto, itemX, itemY); ctx.fillText(texto, itemX, itemY);
+                    ctx.strokeStyle = 'white'; ctx.lineWidth = Math.max(2, intensidad * 2.5); ctx.lineJoin = 'round';
+                    ctx.strokeText(texto, itemX, itemY); 
+                    ctx.fillStyle = baseFillStyle; ctx.fillText(texto, itemX, itemY);
                 } else if (efecto === 'neon') {
-                    ctx.shadowColor = inputColor; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = inputColor; ctx.shadowBlur = intensidad * 3; ctx.fillStyle = '#ffffff';
                     ctx.fillText(texto, itemX, itemY);
                     ctx.shadowBlur = 0; ctx.strokeStyle = inputColor; ctx.lineWidth = 2;
                     ctx.strokeText(texto, itemX, itemY);
                 } else if (efecto === 'retro') {
-                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillText(texto, itemX + 3, itemY + 3);
-                    ctx.fillStyle = inputColor; ctx.fillText(texto, itemX, itemY);
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillText(texto, itemX + (intensidad * 0.6), itemY + (intensidad * 0.6));
+                    ctx.fillStyle = baseFillStyle; ctx.fillText(texto, itemX, itemY);
                 } else if (efecto === 'glitch') {
-                    ctx.fillStyle = 'cyan'; ctx.fillText(texto, itemX - 2, itemY);
-                    ctx.fillStyle = 'magenta'; ctx.fillText(texto, itemX + 2, itemY);
-                    ctx.fillStyle = inputColor; ctx.fillText(texto, itemX, itemY);
+                    ctx.fillStyle = 'cyan'; ctx.fillText(texto, itemX - (intensidad * 0.4), itemY);
+                    ctx.fillStyle = 'magenta'; ctx.fillText(texto, itemX + (intensidad * 0.4), itemY);
+                    ctx.fillStyle = baseFillStyle; ctx.fillText(texto, itemX, itemY);
                 } else if (efecto === 'arcoiris') {
+                    // Efecto Arcoíris con ROTACIÓN de colores basada en intensidad
                     const gradient = ctx.createLinearGradient(itemX, 0, itemX + ctx.measureText(texto).width, 0);
-                    gradient.addColorStop(0, "red"); gradient.addColorStop(0.2, "orange");
-                    gradient.addColorStop(0.4, "yellow"); gradient.addColorStop(0.6, "green");
-                    gradient.addColorStop(0.8, "blue"); gradient.addColorStop(1, "violet");
+                    // Usamos HSL para rotar el matiz (hue) según la intensidad (0 a 360 grados)
+                    const shift = (intensidad - 1) * 18; // 20 pasos * 18 = 360 grados aprox
+                    for (let i = 0; i <= 10; i++) {
+                        const p = i / 10;
+                        const hue = (p * 360 + shift) % 360;
+                        gradient.addColorStop(p, `hsl(${hue}, 100%, 50%)`);
+                    }
                     ctx.fillStyle = gradient; ctx.fillText(texto, itemX, itemY);
                     ctx.lineWidth = 0.5; ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.strokeText(texto, itemX, itemY);
+                } else if (efecto === 'brillo') {
+                    // Resplandor Mágico (Blanco/Dorado exterior)
+                    ctx.shadowColor = "white"; ctx.shadowBlur = intensidad * 2; 
+                    ctx.fillStyle = baseFillStyle; ctx.fillText(texto, itemX, itemY);
+                    // Reforzar el texto encima
+                    ctx.shadowBlur = 0; ctx.fillText(texto, itemX, itemY);
+                } else if (efecto === 'comic') {
+                    ctx.strokeStyle = 'black'; ctx.lineWidth = Math.max(1, intensidad); ctx.lineJoin = 'round';
+                    ctx.strokeText(texto, itemX, itemY); 
+                    ctx.fillStyle = baseFillStyle; ctx.fillText(texto, itemX, itemY);
+                } else if (efecto === 'gold') {
+                    // Efecto Metálico Variable según Intensidad
+                    const gradient = ctx.createLinearGradient(itemX, itemY - fontSize/2, itemX, itemY + fontSize/2);
+                    
+                    if (intensidad <= 5) {
+                        // Oro Clásico
+                        gradient.addColorStop(0, "#FDB931"); gradient.addColorStop(0.3, "#FFFFAC");
+                        gradient.addColorStop(0.6, "#D19C1D"); gradient.addColorStop(1, "#C58808");
+                        ctx.strokeStyle = '#8a6e2f';
+                    } else if (intensidad <= 10) {
+                        // Plata / Acero
+                        gradient.addColorStop(0, "#E0E0E0"); gradient.addColorStop(0.3, "#FFFFFF");
+                        gradient.addColorStop(0.6, "#A0A0A0"); gradient.addColorStop(1, "#505050");
+                        ctx.strokeStyle = '#404040';
+                    } else if (intensidad <= 15) {
+                        // Bronce / Cobre
+                        gradient.addColorStop(0, "#e8c39e"); gradient.addColorStop(0.3, "#ffdfc4");
+                        gradient.addColorStop(0.6, "#cd7f32"); gradient.addColorStop(1, "#8c5620");
+                        ctx.strokeStyle = '#6e4115';
+                    } else {
+                        // Oro Rosa
+                        gradient.addColorStop(0, "#F6D3C5"); gradient.addColorStop(0.3, "#FFF0E8");
+                        gradient.addColorStop(0.6, "#D69E8E"); gradient.addColorStop(1, "#B57B6A");
+                        ctx.strokeStyle = '#8a5a4a';
+                    }
+
+                    ctx.fillStyle = gradient; ctx.fillText(texto, itemX, itemY);
+                    ctx.lineWidth = 1; ctx.strokeText(texto, itemX, itemY);
                 } else {
+                    ctx.fillStyle = baseFillStyle;
                     ctx.fillText(texto, itemX, itemY);
                 }
                 ctx.restore();
@@ -350,24 +446,53 @@ export class CanvasRenderer {
             });
         };
 
-        dibujarElementoTexto('nombre', nombre, inputColorNombre, fuenteNombre, inputTamanoNombre, selectEfectoTextoNombre);
-        dibujarElementoTexto('apellido', apellido, inputColorNombre, fuenteNombre, inputTamanoNombre, selectEfectoTextoNombre);
-        dibujarElementoTexto('grado', grado, inputColorGrado, fuenteGrado, inputTamanoGrado, selectEfectoTextoGrado, true);
+        dibujarElementoTexto('nombre', nombre, inputColorNombre, fuenteNombre, inputTamanoNombre, selectEfectoTextoNombre, inputIntensidadEfectoNombre, checkArcoirisNombre, inputShiftArcoirisNombre, checkMetalNombre, inputTipoMetalNombre);
+        dibujarElementoTexto('apellido', apellido, inputColorNombre, fuenteNombre, inputTamanoNombre, selectEfectoTextoNombre, inputIntensidadEfectoNombre, checkArcoirisNombre, inputShiftArcoirisNombre, checkMetalNombre, inputTipoMetalNombre);
+        dibujarElementoTexto('grado', grado, inputColorGrado, fuenteGrado, inputTamanoGrado, selectEfectoTextoGrado, inputIntensidadEfectoGrado, checkArcoirisGrado, inputShiftArcoirisGrado, checkMetalGrado, inputTipoMetalGrado, true);
 
         ctx.restore();
 
         // Dibujar Borde
         ctx.save();
-        ctx.strokeStyle = colorBorde;
-        ctx.lineWidth = grosorBorde;
-        const inset = grosorBorde / 2;
-        ctx.beginPath();
+        
+        // 1. Determinar Color/Relleno del Borde
+        let strokeStyle = colorBorde;
+        if (checkArcoirisBorde) {
+             const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+             const shift = parseInt(inputShiftArcoirisBorde || 0, 10);
+             for (let i = 0; i <= 10; i++) {
+                const p = i / 10;
+                const hue = (p * 360 + shift) % 360;
+                gradient.addColorStop(p, `hsl(${hue}, 100%, 50%)`);
+             }
+             strokeStyle = gradient;
+        } else if (checkMetalBorde) {
+             const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+             const type = parseInt(inputTipoMetalBorde || 0, 10);
+             if (type === 0) { // Oro
+                gradient.addColorStop(0, "#FDB931"); gradient.addColorStop(0.3, "#FFFFAC"); gradient.addColorStop(0.6, "#D19C1D"); gradient.addColorStop(1, "#C58808");
+            } else if (type === 1) { // Plata
+                gradient.addColorStop(0, "#E0E0E0"); gradient.addColorStop(0.3, "#FFFFFF"); gradient.addColorStop(0.6, "#A0A0A0"); gradient.addColorStop(1, "#505050");
+            } else if (type === 2) { // Bronce
+                gradient.addColorStop(0, "#e8c39e"); gradient.addColorStop(0.3, "#ffdfc4"); gradient.addColorStop(0.6, "#cd7f32"); gradient.addColorStop(1, "#8c5620");
+            } else { // Rosa
+                gradient.addColorStop(0, "#F6D3C5"); gradient.addColorStop(0.3, "#FFF0E8"); gradient.addColorStop(0.6, "#D69E8E"); gradient.addColorStop(1, "#B57B6A");
+            }
+             strokeStyle = gradient;
+        }
 
-        const trazarRectangulos = (insetVal) => {
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = grosorBorde;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const inset = grosorBorde / 2;
+        
+        const trazarPath = (insetVal) => {
+            ctx.beginPath();
             if (plantilla.is_combo) {
                 plantilla.areas.forEach((area, index) => {
                     const usarRedondeo = index === 0 ? checkboxBorde : checkboxBorde2;
-                    const currentRadio = usarRedondeo ? radio : 0;
+                    const currentRadio = usarRedondeo ? radio : 0;       
                     const x = mmToPx(area.x_mm) + insetVal;
                     const y = mmToPx(area.y_mm) + insetVal;
                     const w = mmToPx(area.w_mm) - insetVal * 2;
@@ -382,13 +507,101 @@ export class CanvasRenderer {
             }
         };
 
-        if (estiloBorde === 'punteado') { ctx.setLineDash([grosorBorde * 2, grosorBorde * 1.5]); trazarRectangulos(inset); ctx.stroke(); }
-        else if (estiloBorde === 'doble') { trazarRectangulos(inset); ctx.stroke(); ctx.beginPath(); ctx.lineWidth = 1; const margenInt = grosorBorde * 3; trazarRectangulos(margenInt); ctx.stroke(); }
-        else if (estiloBorde === 'neon') { ctx.shadowColor = colorBorde; ctx.shadowBlur = 15; ctx.strokeStyle = '#fff'; ctx.lineWidth = grosorBorde; trazarRectangulos(inset); ctx.stroke(); }
-        else if (estiloBorde === '3d') { ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.save(); ctx.translate(4, 4); ctx.beginPath(); trazarRectangulos(inset); ctx.fill(); ctx.restore(); ctx.beginPath(); trazarRectangulos(inset); ctx.stroke(); }
-        else if (estiloBorde === 'arcoiris') { const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height); gradient.addColorStop(0, 'red'); gradient.addColorStop(0.2, 'orange'); gradient.addColorStop(0.4, 'yellow'); gradient.addColorStop(0.6, 'green'); gradient.addColorStop(0.8, 'blue'); gradient.addColorStop(1, 'violet'); ctx.strokeStyle = gradient; trazarRectangulos(inset); ctx.stroke(); }
-        else if (estiloBorde === 'dashed-color') { ctx.strokeStyle = colorBorde; ctx.setLineDash([15, 10]); ctx.lineCap = 'round'; trazarRectangulos(inset); ctx.stroke(); }
-        else { trazarRectangulos(inset); ctx.stroke(); }
+        // Función auxiliar para dibujar el estilo (Forma)
+        const dibujarEstilo = (baseInset, baseWidth, colorOverride = null) => {
+            ctx.save();
+            if (colorOverride) ctx.strokeStyle = colorOverride;
+            ctx.lineWidth = baseWidth;
+            
+            if (estiloBorde === 'punteado') {
+                ctx.setLineDash([0, baseWidth * 2]);
+                ctx.lineCap = 'round';
+                trazarPath(baseInset);
+                ctx.stroke();
+            } else if (estiloBorde === 'dashed') {
+                ctx.setLineDash([baseWidth * 3, baseWidth * 2]);
+                ctx.lineCap = 'butt';
+                trazarPath(baseInset);
+                ctx.stroke();
+            } else if (estiloBorde === 'doble') {
+                ctx.setLineDash([]);
+                trazarPath(baseInset);
+                ctx.stroke();
+                // Línea interna
+                const inset2 = baseInset + baseWidth * 1.5;
+                ctx.lineWidth = baseWidth * 0.5;
+                trazarPath(inset2);
+                ctx.stroke();
+            } else if (estiloBorde === 'sketch') {
+                ctx.setLineDash([]);
+                // Línea principal
+                trazarPath(baseInset);
+                ctx.stroke();
+                // Líneas "mal dibujadas" para efecto boceto
+                ctx.lineWidth = baseWidth * 0.5;
+                ctx.translate(1.5, 1.5);
+                trazarPath(baseInset);
+                ctx.stroke();
+                ctx.translate(-3, -1);
+                trazarPath(baseInset);
+                ctx.stroke();
+            } else if (estiloBorde === 'vintage') {
+                ctx.setLineDash([]);
+                // Marco grueso
+                trazarPath(baseInset);
+                ctx.stroke();
+                // Línea fina interna decorativa
+                ctx.lineWidth = 1;
+                const insetInner = baseInset + baseWidth + 2;
+                trazarPath(insetInner);
+                ctx.stroke();
+            } else {
+                // Simple
+                ctx.setLineDash([]);
+                trazarPath(baseInset);
+                ctx.stroke();
+            }
+            ctx.restore();
+        };
+
+        // 2. Aplicar Efectos (que llaman a dibujarEstilo)
+        const efecto = selectEfectoBorde || 'ninguno';
+        const intensidadBorde = parseInt(inputIntensidadEfectoBorde || 5, 10);
+
+        if (efecto === 'sombra_hard') {
+            // Sombra sólida desplazada (Pop Art)
+            ctx.save();
+            ctx.translate(intensidadBorde, intensidadBorde);
+            dibujarEstilo(inset, grosorBorde, 'rgba(0,0,0,0.3)'); 
+            ctx.restore();
+            dibujarEstilo(inset, grosorBorde);
+        } else if (efecto === 'sombra_soft') {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = intensidadBorde * 2;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 5;
+            dibujarEstilo(inset, grosorBorde);
+            ctx.restore();
+        } else if (efecto === 'neon') {
+            ctx.save();
+            ctx.shadowColor = (checkArcoirisBorde || checkMetalBorde) ? '#ffffff' : colorBorde;
+            ctx.shadowBlur = 15 + intensidadBorde;
+            dibujarEstilo(inset, grosorBorde);
+            // Núcleo blanco
+            ctx.shadowBlur = 0;
+            dibujarEstilo(inset, grosorBorde * 0.3, 'rgba(255,255,255,0.8)');
+            ctx.restore();
+        } else if (efecto === 'glow') {
+            ctx.save();
+            ctx.shadowColor = (checkArcoirisBorde || checkMetalBorde) ? '#ffffff' : colorBorde;
+            ctx.shadowBlur = intensidadBorde * 3;
+            dibujarEstilo(inset, grosorBorde);
+            ctx.restore();
+        } else {
+            dibujarEstilo(inset, grosorBorde);
+        }
+
         ctx.restore();
     }
 

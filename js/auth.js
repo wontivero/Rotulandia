@@ -14,6 +14,10 @@ export class AuthManager {
         this.landingPage = document.getElementById('landing-page');
         this.appContainer = document.getElementById('app-container');
         this.btnLoginHero = document.getElementById('btn-login-hero');
+        this.btnTutorialFinalizar = document.getElementById('btn-tutorial-finalizar');
+        this.brandLink = document.getElementById('brand-link');
+        this.navEditor = document.getElementById('nav-editor');
+        this.navMisDisenos = document.getElementById('nav-mis-disenos');
 
         this.initEvents();
         this.monitorAuthState();
@@ -27,7 +31,51 @@ export class AuthManager {
             this.btnLogout.addEventListener('click', () => this.logout());
         }
         if (this.btnLoginHero) {
-            this.btnLoginHero.addEventListener('click', () => this.login());
+            this.btnLoginHero.addEventListener('click', () => {
+                if (auth.currentUser) {
+                    this.showApp(); // Si ya está logueado, ir al editor
+                } else {
+                    this.login();
+                }
+            });
+        }
+        if (this.btnTutorialFinalizar) {
+            this.btnTutorialFinalizar.addEventListener('click', () => {
+                if (!auth.currentUser) {
+                    this.login();
+                } else {
+                    this.appContainer.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+
+        // Navegación
+        if (this.brandLink) {
+            this.brandLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showLanding();
+            });
+        }
+        if (this.navEditor) {
+            this.navEditor.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (auth.currentUser) this.showApp();
+                else this.login();
+            });
+        }
+        if (this.navMisDisenos) {
+            this.navMisDisenos.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (auth.currentUser) {
+                    this.showApp();
+                    // Pequeño delay para asegurar que la vista cambió antes de scrollear
+                    setTimeout(() => {
+                        document.getElementById('mis-disenos-container').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                } else {
+                    this.login();
+                }
+            });
         }
     }
 
@@ -66,18 +114,27 @@ export class AuthManager {
                 this.userInfo.classList.remove('d-none');
                 this.userPhoto.src = user.photoURL;
                 this.userName.textContent = user.displayName.split(' ')[0]; // Solo el primer nombre
-                this.landingPage.classList.add('d-none');
-                this.appContainer.classList.remove('d-none');
+                this.showApp();
             } else {
                 // Usuario no logueado
                 this.btnLogin.classList.remove('d-none');
                 this.userInfo.classList.add('d-none');
                 this.userPhoto.src = '';
                 this.userName.textContent = '';
-                this.landingPage.classList.remove('d-none');
-                this.appContainer.classList.add('d-none');
+                this.showLanding();
             }
         });
+    }
+
+    showApp() {
+        this.landingPage.classList.add('d-none');
+        this.appContainer.classList.remove('d-none');
+    }
+
+    showLanding() {
+        this.landingPage.classList.remove('d-none');
+        this.appContainer.classList.add('d-none');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // Función para guardar/actualizar el usuario en Firestore
