@@ -185,7 +185,14 @@ export class UIManager {
         this.elements.btnAgregarQR.addEventListener('click', () => this.generarQR());
 
         // Descargas
-        this.elements.botonDescargarPDF.addEventListener('click', () => this.pdfGenerator.generarPDF(this.getState(), this.renderer));
+        this.elements.botonDescargarPDF.addEventListener('click', () => {
+            if (!this.elements.inputNombre.value && !this.elements.inputApellido.value) {
+                this.showToast('⚠️ Falta información', 'Por favor, escribe al menos un nombre o apellido antes de generar el PDF.', 'warning');
+                this.resaltarControles('nombre');
+                return;
+            }
+            this.pdfGenerator.generarPDF(this.getState(), this.renderer);
+        });
         this.elements.botonDescargarPNG.addEventListener('click', () => this.pdfGenerator.descargarPNG(this.renderer, this.getState()));
 
         // Canvas Interacción
@@ -285,6 +292,97 @@ export class UIManager {
         this.updatePreview();
     }
 
+    // --- SISTEMA DE NOTIFICACIONES MODERNO ---
+    
+    showToast(titulo, mensaje, tipo = 'info') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        let icon = 'ℹ️';
+        let headerClass = 'text-primary';
+        if (tipo === 'success') { icon = '✅'; headerClass = 'text-success'; }
+        if (tipo === 'error') { icon = '❌'; headerClass = 'text-danger'; }
+        if (tipo === 'warning') { icon = '⚠️'; headerClass = 'text-warning'; }
+
+        const toastHtml = `
+            <div class="toast show fade border-0 shadow-lg rounded-3 mb-3" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header border-0 bg-white rounded-top-3">
+                    <span class="me-2 fs-5">${icon}</span>
+                    <strong class="me-auto ${headerClass}">${titulo}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body bg-white rounded-bottom-3 pt-0 text-secondary">
+                    ${mensaje}
+                </div>
+            </div>
+        `;
+        
+        // Crear elemento temporal
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = toastHtml.trim();
+        const toastEl = tempDiv.firstChild;
+        
+        container.appendChild(toastEl);
+        
+        // Auto eliminar después de 4 segundos
+        setTimeout(() => {
+            toastEl.classList.remove('show');
+            setTimeout(() => toastEl.remove(), 500);
+        }, 4000);
+    }
+
+    showConfirm(titulo, mensaje, icono = '❓', textoConfirmar = 'Sí, continuar') {
+        return new Promise((resolve) => {
+            const modalEl = document.getElementById('confirmationModal');
+            if (!modalEl) {
+                // Fallback si no existe el modal en el HTML
+                resolve(confirm(mensaje.replace(/<[^>]*>?/gm, ''))); 
+                return;
+            }
+            const modal = new bootstrap.Modal(modalEl);
+            
+            document.getElementById('confirmTitle').textContent = titulo;
+            document.getElementById('confirmMessage').innerHTML = mensaje;
+            document.getElementById('confirmIcon').textContent = icono;
+            
+            document.getElementById('confirmButtons').style.display = 'grid';
+            document.getElementById('alertButtons').style.display = 'none';
+            
+            const btnConfirm = document.getElementById('btnConfirmAction');
+            btnConfirm.textContent = textoConfirmar;
+            
+            // Clonar botón para eliminar listeners viejos
+            const newBtn = btnConfirm.cloneNode(true);
+            btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
+            
+            newBtn.addEventListener('click', () => {
+                modal.hide();
+                resolve(true);
+            });
+            
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                resolve(false);
+            }, { once: true });
+            
+            modal.show();
+        });
+    }
+
+    showAlert(titulo, mensaje, icono = 'ℹ️') {
+        const modalEl = document.getElementById('confirmationModal');
+        if (!modalEl) {
+            alert(mensaje.replace(/<[^>]*>?/gm, ''));
+            return;
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        document.getElementById('confirmTitle').textContent = titulo;
+        document.getElementById('confirmMessage').innerHTML = mensaje;
+        document.getElementById('confirmIcon').textContent = icono;
+        document.getElementById('confirmButtons').style.display = 'none';
+        document.getElementById('alertButtons').style.display = 'grid';
+        modal.show();
+    }
+
     generateShortId(length = 6) {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let result = '';
@@ -367,7 +465,7 @@ export class UIManager {
                     valorFinalQR = `${baseUrl}qr.html?id=${docId}`;
                 } catch (error) {
                     console.error("Error creando QR dinámico:", error);
-                    alert("Error al crear QR dinámico. Se usará uno estático.");
+                    this.showToast('Error de conexión', 'No se pudo crear el QR dinámico. Se usará uno estático.', 'error');
                     // Fallback a estático si falla la DB
                     valorFinalQR = `${baseUrl}contacto.html?t=${telefonoLimpio}&n=${nombre}&a=${apellido}`;
                 } finally {

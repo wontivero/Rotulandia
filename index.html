@@ -397,5 +397,37 @@
             </div>
         </div>
     </div>
+
+    <!-- Contenedor de Notificaciones (Toasts) -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;" id="toast-container">
+        <!-- Los toasts se inyectarán aquí dinámicamente -->
+    </div>
+
+    <!-- Modal Genérico de Confirmación / Alerta -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header border-0 pb-0 justify-content-end">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center pt-0 pb-4 px-4">
+                    <div id="confirmIcon" class="mb-3 display-1">❓</div>
+                    <h5 class="modal-title fw-bold mb-2" id="confirmTitle">Confirmación</h5>
+                    <p id="confirmMessage" class="text-muted mb-4">¿Estás seguro?</p>
+                    
+                    <div class="d-grid gap-2" id="confirmButtons">
+                        <!-- Botones para Confirmar -->
+                        <button type="button" class="btn btn-primary rounded-pill fw-bold py-2" id="btnConfirmAction">Sí, continuar</button>
+                        <button type="button" class="btn btn-light rounded-pill fw-bold py-2 text-muted" data-bs-dismiss="modal" id="btnConfirmCancel">Cancelar</button>
+                    </div>
+                    
+                    <div class="d-grid" id="alertButtons" style="display: none;">
+                        <!-- Botón para Alerta (Solo OK) -->
+                        <button type="button" class="btn btn-primary rounded-pill fw-bold py-2" data-bs-dismiss="modal">Entendido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

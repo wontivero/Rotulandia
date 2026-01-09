@@ -48,7 +48,7 @@ export class StorageManager {
     async guardarDiseno(comoNuevo = false) {
         const user = auth.currentUser;
         if (!user) {
-            alert("Debes iniciar sesión para guardar tus diseños.");
+            this.uiManager.showToast('Inicia sesión', 'Debes ingresar con Google para guardar tus diseños.', 'warning');
             return;
         }
 
@@ -139,19 +139,19 @@ export class StorageManager {
             if (this.currentDesignId && !comoNuevo) {
                 // Actualizar existente
                 await updateDoc(doc(db, "disenos", this.currentDesignId), disenoData);
-                alert("¡Diseño actualizado con éxito!");
+                this.uiManager.showToast('¡Guardado!', 'Tu diseño se ha actualizado correctamente.', 'success');
             } else {
                 // Crear nuevo
                 const docRef = await addDoc(collection(db, "disenos"), disenoData);
                 this.currentDesignId = docRef.id; // Ahora estamos trabajando sobre este
-                alert("¡Diseño guardado como nuevo!");
+                this.uiManager.showToast('¡Creado!', 'Diseño guardado como nuevo en tu colección.', 'success');
             }
             
             this.cargarMisDisenos(user.uid); // Recargar lista
             this.cargarMisQRs(user.uid); // Por si se generaron QRs nuevos
         } catch (error) {
             console.error("Error al guardar diseño:", error);
-            alert("Error al guardar el diseño.");
+            this.uiManager.showToast('Error', 'Hubo un problema al guardar el diseño.', 'error');
         } finally {
             this.btnGuardar.disabled = false;
             this.btnGuardarNuevo.disabled = false;
@@ -282,21 +282,29 @@ export class StorageManager {
                 card.querySelector('.btn-duplicar').addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.cargarDisenoEnCanvas(data.config, null); // null ID = Nuevo diseño
-                    alert("Diseño duplicado cargado. Al guardar se creará uno nuevo.");
+                    this.uiManager.showToast('Duplicado', 'Diseño cargado como copia. Al guardar se creará uno nuevo.', 'info');
                 });
 
                 // Evento para eliminar
                 card.querySelector('.btn-eliminar').addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if (confirm('¿Estás seguro de que quieres eliminar este diseño? Esta acción no se puede deshacer.')) {
+                    const confirmado = await this.uiManager.showConfirm(
+                        'Eliminar Diseño', 
+                        '¿Estás seguro de que quieres eliminar este diseño? <b>Esta acción no se puede deshacer.</b>',
+                        '🗑️',
+                        'Sí, eliminar'
+                    );
+                    
+                    if (confirmado) {
                         try {
                             await deleteDoc(doc(db, "disenos", docSnap.id)); // Eliminar de Firestore
                             // Nota: Las imágenes en Storage quedan huérfanas por ahora (se puede limpiar con Cloud Functions en un futuro)
                             this.cargarMisDisenos(uid); // Recargar lista
                             if (this.currentDesignId === docSnap.id) this.currentDesignId = null; // Resetear si era el actual
+                            this.uiManager.showToast('Eliminado', 'El diseño ha sido eliminado.', 'success');
                         } catch (err) {
                             console.error("Error al eliminar:", err);
-                            alert("Error al eliminar el diseño.");
+                            this.uiManager.showToast('Error', 'No se pudo eliminar el diseño.', 'error');
                         }
                     }
                 });
@@ -317,7 +325,11 @@ export class StorageManager {
                 if (btnInfoQr) {
                     btnInfoQr.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        alert("💡 ¿Para qué sirve el QR?\n\nSi agregas un código QR a tu diseño, quien encuentre los útiles perdidos podrá escanearlo y contactarte por WhatsApp para devolverlos.\n\n¡Es gratis y muy seguro! Edita este diseño y agrega un QR desde el panel.");
+                        this.uiManager.showAlert(
+                            '💡 ¿Para qué sirve el QR?',
+                            'Si agregas un código QR a tu diseño, quien encuentre los útiles perdidos podrá escanearlo y contactarte por WhatsApp para devolverlos.<br><br><b>¡Es gratis y muy seguro!</b> Edita este diseño y agrega un QR desde el panel.',
+                            '📱'
+                        );
                     });
                 }
                 
@@ -384,7 +396,7 @@ export class StorageManager {
         this.btnModalGuardar.addEventListener('click', async () => {
             const nuevoTel = document.getElementById('modal-qr-telefono').value.trim();
             await updateDoc(doc(db, "qrs", qrData.id), { telefono: nuevoTel });
-            alert("Teléfono actualizado.");
+            this.uiManager.showToast('Actualizado', 'El teléfono del QR ha sido actualizado.', 'success');
             this.modal.hide();
             this.cargarMisQRs(auth.currentUser.uid);
             this.cargarMisDisenos(auth.currentUser.uid); // Refrescar diseños para actualizar estado
@@ -407,12 +419,21 @@ export class StorageManager {
             });
 
             if (estaEnUso) {
-                alert("⛔ No puedes eliminar este QR porque está siendo utilizado en uno de tus diseños guardados.\n\nSi realmente quieres borrarlo, primero elimina el diseño que lo contiene.");
-            } else if (confirm('⚠️ ¿Estás seguro de que quieres eliminar este QR?\n\nSi ya has impreso etiquetas con este código, dejarán de funcionar y no podrán ser escaneadas por nadie.')) {
+                this.uiManager.showAlert('No se puede eliminar', '⛔ Este QR está siendo utilizado en uno de tus diseños guardados.<br><br>Si realmente quieres borrarlo, primero elimina el diseño que lo contiene.', '🚫');
+            } else {
+                const confirmado = await this.uiManager.showConfirm(
+                    'Eliminar QR',
+                    '⚠️ <b>¿Estás seguro?</b><br>Si ya has impreso etiquetas con este código, dejarán de funcionar y no podrán ser escaneadas por nadie.',
+                    '🗑️', 'Sí, eliminar QR'
+                );
+                
+                if (confirmado) {
                 await deleteDoc(doc(db, "qrs", qrData.id));
                 this.modal.hide();
                 this.cargarMisQRs(auth.currentUser.uid);
                 this.cargarMisDisenos(auth.currentUser.uid); // Refrescar diseños para actualizar estado
+                this.uiManager.showToast('QR Eliminado', 'El código QR ha sido borrado permanentemente.', 'success');
+                }
             }
         });
 
@@ -425,7 +446,11 @@ export class StorageManager {
             const newState = !isActivo;
             await updateDoc(doc(db, "qrs", qrData.id), { activo: newState });
             
-            alert(newState ? "QR Activado. Ahora redirigirá a WhatsApp." : "QR Pausado. Al escanearlo se mostrará un mensaje de inactivo.");
+            if (newState) {
+                this.uiManager.showToast('QR Activado', 'Ahora redirigirá a WhatsApp correctamente.', 'success');
+            } else {
+                this.uiManager.showToast('QR Pausado', 'Al escanearlo se mostrará un mensaje de inactivo.', 'warning');
+            }
             this.modal.hide();
             this.cargarMisQRs(auth.currentUser.uid);
             this.cargarMisDisenos(auth.currentUser.uid);
@@ -483,6 +508,7 @@ export class StorageManager {
         if (config.imagenes && config.imagenes.length > 0) {
             config.imagenes.forEach(imgConfig => {
                 const img = new Image();
+                img.crossOrigin = "Anonymous"; // IMPORTANTE: Evita el error "Tainted canvases"
                 img.src = imgConfig.src;
                 img.onload = () => {
                     this.uiManager.state.imagenesEnCanvas.push({
@@ -519,6 +545,6 @@ export class StorageManager {
         // Scroll arriba para ver el resultado
         document.querySelector('.configurador').scrollIntoView({ behavior: 'smooth' });
         
-        alert("Diseño cargado correctamente.");
+        this.uiManager.showToast('Cargado', 'Diseño listo para editar.', 'success');
     }
 }

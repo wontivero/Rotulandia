@@ -5,11 +5,6 @@ export class PDFGenerator {
     async generarPDF(state, renderer) {
         await renderer.render(state, true);
 
-        if (!state.inputNombre && !state.inputApellido) {
-            alert('Por favor, elige un personaje y escribe un nombre antes de generar el PDF.');
-            return;
-        }
-
         const boton = document.getElementById('boton-descargar-pdf');
         const textoOriginal = boton.textContent;
         boton.textContent = 'Generando PDF...';
