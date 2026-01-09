@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redireccionando... - Rotulandia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+        .card { max-width: 420px; width: 100%; padding: 30px; text-align: center; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); background: white; }
+        .hero-emoji { font-size: 4rem; margin-bottom: 15px; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
+        .btn-whatsapp { background-color: #25D366; border: none; transition: transform 0.2s; }
+        .btn-whatsapp:hover { background-color: #20bd5a; transform: scale(1.02); }
+        .btn-whatsapp:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="card shadow border-0">
+        <div id="loading">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Conectando...</p>
+        </div>
+        <div id="content" style="display: none;">
+            <div class="hero-emoji">🌟</div>
+            <h2 class="mb-3 fw-bold text-dark">¡Gracias por escanearme!</h2>
+            
+            <p class="lead mb-4" style="font-size: 1.1rem; color: #555;">
+                Parece que encontraste algo muy especial que pertenece a <br>
+                <strong id="nombre-propietario" class="text-primary fs-4 d-block mt-2"></strong>
+            </p>
+
+            <div class="alert alert-light border-0 bg-light rounded-3 p-3 mb-4 text-start">
+                <small class="text-muted d-block mb-1" id="contexto-titulo">💡 ¿Qué puedes hacer?</small>
+                <p class="mb-0 small text-secondary" id="contexto-frase">
+                    Este objeto puede ser un útil escolar, un juguete o algo valioso para su dueño. 
+                    Tu ayuda para que vuelva a casa es súper importante. ¡Serás un héroe hoy! 🦸‍♂️🦸‍♀️
+                </p>
+            </div>
+
+            <a id="btn-whatsapp" href="#" class="btn btn-whatsapp w-100 py-3 fw-bold text-white rounded-pill shadow-sm mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-whatsapp me-2" viewBox="0 0 16 16">
+                    <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592z"/>
+                </svg>
+                Avisar a la familia por WhatsApp
+            </a>
+            
+            <p class="mt-4 small text-muted border-top pt-3">
+                Esta etiqueta inteligente fue creada con ❤️ en <a href="index.html" class="text-decoration-none fw-bold text-muted">Rotulandia</a>
+            </p>
+        </div>
+        <div id="error" style="display: none;">
+            <div style="font-size: 3rem;">😕</div>
+            <h3 class="text-danger mt-2">Código no disponible</h3>
+            <p class="text-muted">No pudimos encontrar la información de contacto. Es posible que el código haya sido desactivado por el dueño.</p>
+            <a href="index.html" class="btn btn-outline-secondary btn-sm mt-3">Ir a Rotulandia</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db } from './js/firebase-config.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const mensajesMotivadores = [
+            {
+                titulo: "💡 ¿Qué puedes hacer?",
+                frase: "Este objeto puede ser un útil escolar, un juguete o algo valioso para su dueño. Tu ayuda para que vuelva a casa es súper importante. <strong>¡Serás un héroe hoy!</strong> 🦸‍♂️🦸‍♀️"
+            },
+            {
+                titulo: "❤️ Un pequeño gesto...",
+                frase: "Detrás de este objeto hay alguien que lo extraña mucho. Devolverlo es un acto de bondad enorme. <strong>¡Harás muy feliz a alguien hoy!</strong> 😊💖"
+            },
+            {
+                titulo: "✨ Tu buena acción del día",
+                frase: "A veces, las cosas se pierden para ser encontradas por personas increíbles como tú. <strong>¡El mundo necesita más gente así!</strong> 🌍🍀"
+            },
+            {
+                titulo: "🚀 Misión de rescate",
+                frase: "Este objeto está lejos de casa y necesita tu ayuda para volver. <strong>¡Misión de rescate activada!</strong> 🛰️👨‍🚀"
+            },
+            {
+                titulo: "🌟 Eres la esperanza",
+                frase: "Imagina la sonrisa del dueño al recuperar esto. Tienes el poder de cambiar su día por completo. <strong>¡Gracias por ser genial!</strong> 🙌✨"
+            },
+            {
+                titulo: "🤝 Cadena de favores",
+                frase: "Hoy ayudas tú, mañana te ayudarán a ti. Devolver lo perdido crea una comunidad más unida y confiable. <strong>¡Todo vuelve!</strong> 🔄💫"
+            },
+            {
+                titulo: "🕵️‍♂️ Detective de objetos",
+                frase: "¡Has resuelto el misterio de dónde estaba! Ahora solo falta el paso final: contactar a la familia. <strong>¡Buen trabajo!</strong> 🔎🎉"
+            },
+            {
+                titulo: "🌈 Magia en tus manos",
+                frase: "Tienes la oportunidad de transformar un momento triste (perder algo) en uno mágico (recuperarlo). <strong>¡Haz tu magia!</strong> 🎩🐇"
+            },
+            {
+                titulo: "🦸‍♀️ Superpoder activado",
+                frase: "No todos los héroes llevan capa, algunos simplemente escanean códigos QR y devuelven cosas perdidas. <strong>¡Ese eres tú!</strong> 💪⚡"
+            },
+            {
+                titulo: "💌 Mensaje del destino",
+                frase: "Si estás leyendo esto, es porque el destino sabía que harías lo correcto. <strong>¡Gracias por tu honestidad!</strong> 🙏📜"
+            },
+            {
+                titulo: "✨ Un reencuentro mágico",
+                frase: "Dicen que las cosas no se pierden, solo esperan a ser encontradas por alguien especial. Hoy, esa persona eres tú. <strong>¡Gracias por hacer posible este reencuentro!</strong> ✨🧸"
+            },
+            {
+                titulo: "🥲 Lágrimas de alegría",
+                frase: "Al devolver esto, no solo entregas un objeto, entregas un suspiro de alivio y una sonrisa enorme. <strong>¡Prepárate para emocionar a alguien!</strong> 🎁❤️"
+            },
+            {
+                titulo: "💎 El valor de los recuerdos",
+                frase: "Este objeto guarda historias, risas y momentos únicos. Al devolverlo, estás salvando un pedacito de vida. <strong>¡Tu gesto vale oro!</strong> 🌟📜"
+            },
+            {
+                titulo: "🦸‍♂️ Héroe sin capa",
+                frase: "En un mundo donde todos corren, tú te detuviste para ayudar. Eso te convierte en un verdadero héroe cotidiano. <strong>¡El mundo te aplaude!</strong> 👏🌍"
+            },
+            {
+                titulo: "📖 Un final feliz",
+                frase: "Toda gran historia merece un final feliz. Con tu ayuda, este objeto perdido encontrará su camino de vuelta a casa. <strong>¡Tú escribes el final de esta historia!</strong> 🌈✍️"
+            },
+            {
+                titulo: "🧵 Una conexión invisible",
+                frase: "Aunque no lo veas, hay un hilo invisible que conecta este objeto con su dueño. Tú acabas de tirar de ese hilo. <strong>¡Gracias por unir los extremos!</strong> 💞🤝"
+            },
+            {
+                titulo: "🌟 Pequeño gran milagro",
+                frase: "Lo que para ti es un minuto, para el dueño de esto es un milagro. Gracias por tomarte el tiempo de hacer lo correcto. <strong>¡Eres increíble!</strong> 🙏✨"
+            },
+            {
+                titulo: "🌻 Sembrando bondad",
+                frase: "Hoy plantas una semilla de bondad devolviendo esto. Mañana, esa bondad florecerá en tu vida cuando menos lo esperes. <strong>¡Gracias por tu gran corazón!</strong> 🌱💖"
+            },
+            {
+                titulo: "🛡️ Guardián de tesoros",
+                frase: "Por un momento, el destino te eligió como guardián de este tesoro perdido. Ahora es momento de completar la misión. <strong>¡Misión cumplida, guardián!</strong> 🗝️🏰"
+            },
+            {
+                titulo: "😄 Alegría compartida",
+                frase: "La felicidad de recuperar algo perdido es inmensa, pero la satisfacción de devolverlo es aún mayor. <strong>¡Disfruta de esa sensación!</strong> 🤝🎉"
+            }
+        ];
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+
+            if (!id) {
+                showError();
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "qrs", id);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.activo === false) {
+                        showInactive();
+                    } else {
+                        showContent(data);
+                    }
+                } else {
+                    showError();
+                }
+            } catch (e) {
+                console.error(e);
+                showError();
+            }
+        }
+
+        function showContent(data) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            const nombreCompleto = `${data.nombre || ''} ${data.apellido || ''}`.trim() || 'un alumno';
+            document.getElementById('nombre-propietario').textContent = nombreCompleto;
+
+            // Mensaje aleatorio
+            const randomMsg = mensajesMotivadores[Math.floor(Math.random() * mensajesMotivadores.length)];
+            document.getElementById('contexto-titulo').textContent = randomMsg.titulo;
+            document.getElementById('contexto-frase').innerHTML = randomMsg.frase;
+
+            const emojiHola = String.fromCodePoint(0x1F44B);
+            const emojiTag = String.fromCodePoint(0x1F3F7);
+            const mensaje = `Hola! ${emojiHola} Escaneé el código QR de Rotulandia y encontré algo que pertenece a *${nombreCompleto}*. ¿Cómo podemos coordinar para devolverlo?\n\n${emojiTag} Mensaje enviado desde Rotulandia.com.ar`;
+            
+            const link = `https://api.whatsapp.com/send?phone=${data.telefono}&text=${encodeURIComponent(mensaje)}`;
+            document.getElementById('btn-whatsapp').href = link;
+        }
+
+        function showInactive() {
+            document.getElementById('loading').style.display = 'none';
+            const errorDiv = document.getElementById('error');
+            errorDiv.style.display = 'block';
+            errorDiv.querySelector('h3').textContent = "QR Desactivado";
+            errorDiv.querySelector('p').textContent = "Este código QR ha sido desactivado temporalmente por su dueño. Si crees que es un error, intenta más tarde.";
+        }
+
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+
+        init();
+    </script>
+</body>
+</html>

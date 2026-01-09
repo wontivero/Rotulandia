@@ -1,5 +1,7 @@
 // js/ui-manager.js
 import { PERSONAJES, FONDOS, PLANTILLAS } from './config.js';
+import { db, auth } from './firebase-config.js';
+import { collection, addDoc, setDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 export class UIManager {
     constructor(renderer, pdfGenerator) {
@@ -68,6 +70,8 @@ export class UIManager {
             botonGenerar: document.getElementById('boton-generar'),
             botonDescargarPDF: document.getElementById('boton-descargar-pdf'),
             botonDescargarPNG: document.getElementById('boton-descargar-png'),
+            botonGuardarDiseno: document.getElementById('boton-guardar-diseno'),
+            botonGuardarNuevo: document.getElementById('boton-guardar-nuevo'),
             btnRandomGradient: document.getElementById('btn-random-gradient'),
             controlImagenFondo: document.getElementById('control-imagen-fondo'),
             inputEscalaPersonaje: document.getElementById('escala-personaje'),
@@ -76,6 +80,8 @@ export class UIManager {
             inputTextoQR: document.getElementById('texto-qr'),
             inputColorQR: document.getElementById('color-qr'),
             btnAgregarQR: document.getElementById('btn-agregar-qr'),
+            quickQRsWrapper: document.getElementById('quick-qrs-wrapper'),
+            quickQRsList: document.getElementById('quick-qrs-list'),
             galeria: document.getElementById('seleccion-personaje'),
             galeriaFondos: document.getElementById('galeria-fondos')
         };
@@ -97,6 +103,8 @@ export class UIManager {
         await this.renderer.render(this.getState());
         this.elements.botonDescargarPDF.classList.remove('boton-descarga-oculto');
         this.elements.botonDescargarPNG.classList.remove('boton-descarga-oculto');
+        this.elements.botonGuardarDiseno.classList.remove('boton-descarga-oculto');
+        this.elements.botonGuardarNuevo.classList.remove('boton-descarga-oculto');
     }
 
     initEvents() {
@@ -130,13 +138,17 @@ export class UIManager {
         this.elements.selectPlantilla.addEventListener('change', () => {
             this.state.offsets = {};
             this.state.selectedTextKey = null;
-            const isCombo = PLANTILLAS[this.elements.selectPlantilla.value].is_combo;
-            if (isCombo) {
-                this.elements.grupoBorde2.style.display = 'flex';
-                this.elements.labelConBorde.textContent = 'Redondear Cuaderno';
-            } else {
-                this.elements.grupoBorde2.style.display = 'none';
-                this.elements.labelConBorde.textContent = 'Redondear Bordes';
+            const plantillaConfig = PLANTILLAS[this.elements.selectPlantilla.value];
+            
+            if (plantillaConfig) {
+                const isCombo = plantillaConfig.is_combo;
+                if (isCombo) {
+                    this.elements.grupoBorde2.style.display = 'flex';
+                    this.elements.labelConBorde.textContent = 'Redondear Cuaderno';
+                } else {
+                    this.elements.grupoBorde2.style.display = 'none';
+                    this.elements.labelConBorde.textContent = 'Redondear Bordes';
+                }
             }
             this.updatePreview();
         });
@@ -273,7 +285,16 @@ export class UIManager {
         this.updatePreview();
     }
 
-    generarQR() {
+    generateShortId(length = 6) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    async generarQR() {
         if (!this.elements.inputTextoQR.value) {
             alert('Por favor, escribe un teléfono o texto para el QR.');
             return;
@@ -286,14 +307,88 @@ export class UIManager {
             const nombre = encodeURIComponent(this.elements.inputNombre.value.trim());
             const apellido = encodeURIComponent(this.elements.inputApellido.value.trim());
             let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-            valorFinalQR = `${baseUrl}contacto.html?t=${telefonoLimpio}`;
-            if (nombre) valorFinalQR += `&n=${nombre}`;
-            if (apellido) valorFinalQR += `&a=${apellido}`;
+            
+            // --- LÓGICA QR DINÁMICO (PREMIUM) ---
+            const user = auth.currentUser;
+            if (user) {
+                // Si está logueado, creamos un registro dinámico
+                try {
+                    this.elements.btnAgregarQR.disabled = true;
+                    this.elements.btnAgregarQR.textContent = "Creando...";
+
+                    // 1. Verificar si ya existe un QR igual para este usuario (Evitar duplicados)
+                    const q = query(collection(db, "qrs"), 
+                        where("uid", "==", user.uid),
+                        where("telefono", "==", telefonoLimpio),
+                        where("nombre", "==", this.elements.inputNombre.value.trim()),
+                        where("apellido", "==", this.elements.inputApellido.value.trim())
+                    );
+                    
+                    const querySnapshot = await getDocs(q);
+                    let docId;
+
+                    if (!querySnapshot.empty) {
+                        // Ya existe, usamos el primero que encontramos
+                        docId = querySnapshot.docs[0].id;
+                        console.log("QR existente reutilizado:", docId);
+                    } else {
+                        // No existe, creamos uno nuevo
+                        // Intentamos generar un ID corto (6 caracteres) para simplificar el QR
+                        let unique = false;
+                        let shortId = '';
+                        let attempts = 0;
+
+                        while (!unique && attempts < 3) {
+                            shortId = this.generateShortId(6);
+                            const docRef = doc(db, "qrs", shortId);
+                            const docSnap = await getDoc(docRef);
+                            if (!docSnap.exists()) unique = true;
+                            attempts++;
+                        }
+
+                        const qrData = {
+                            uid: user.uid,
+                            telefono: telefonoLimpio,
+                            nombre: this.elements.inputNombre.value.trim(),
+                            apellido: this.elements.inputApellido.value.trim(),
+                            createdAt: serverTimestamp()
+                        };
+
+                        if (unique) {
+                            await setDoc(doc(db, "qrs", shortId), qrData);
+                            docId = shortId;
+                        } else {
+                            // Fallback a ID largo si hay colisión (muy raro)
+                            const docRef = await addDoc(collection(db, "qrs"), qrData);
+                            docId = docRef.id;
+                        }
+                    }
+                    
+                    valorFinalQR = `${baseUrl}qr.html?id=${docId}`;
+                } catch (error) {
+                    console.error("Error creando QR dinámico:", error);
+                    alert("Error al crear QR dinámico. Se usará uno estático.");
+                    // Fallback a estático si falla la DB
+                    valorFinalQR = `${baseUrl}contacto.html?t=${telefonoLimpio}&n=${nombre}&a=${apellido}`;
+                } finally {
+                    this.elements.btnAgregarQR.disabled = false;
+                    this.elements.btnAgregarQR.textContent = "Generar QR";
+                }
+            } else {
+                // Si NO está logueado, usamos el QR estático (Legacy)
+                valorFinalQR = `${baseUrl}contacto.html?t=${telefonoLimpio}`;
+                if (nombre) valorFinalQR += `&n=${nombre}`;
+                if (apellido) valorFinalQR += `&a=${apellido}`;
+            }
         }
 
+        this.agregarQRAlCanvas(valorFinalQR, this.elements.inputColorQR.value, docId);
+    }
+
+    agregarQRAlCanvas(valorQR, color, qrId = null) {
         const qr = new QRious({
-            value: valorFinalQR,
-            foreground: this.elements.inputColorQR.value,
+            value: valorQR,
+            foreground: color,
             size: 500,
             level: 'L'
         });
@@ -310,12 +405,62 @@ export class UIManager {
                 wBase: 100,
                 hBase: 100,
                 scale: 1.0,
-                effect: 'ninguno'
+                effect: 'ninguno',
+                isQR: true, // Marcamos esta imagen como un QR
+                qrId: qrId // Guardamos el ID de Firestore para validaciones
             });
             this.state.indiceImagenSeleccionada = this.state.imagenesEnCanvas.length - 1;
             this.actualizarPanelImagen();
             this.updatePreview();
         };
+    }
+
+    renderQuickQRs(qrsData) {
+        if (!qrsData || qrsData.length === 0) {
+            this.elements.quickQRsWrapper.style.display = 'none';
+            return;
+        }
+
+        this.elements.quickQRsWrapper.style.display = 'block';
+        this.elements.quickQRsList.innerHTML = '';
+        
+        let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+
+        qrsData.forEach(qrInfo => {
+            const item = document.createElement('div');
+            item.style.cursor = 'pointer';
+            item.title = `Usar QR de ${qrInfo.nombre} (${qrInfo.telefono})`;
+            item.className = 'd-flex align-items-center gap-2 p-1 border rounded bg-light';
+            
+            // Generar miniatura visual
+            const qrUrl = `${baseUrl}qr.html?id=${qrInfo.id}`;
+            const qrMini = new QRious({ value: qrUrl, size: 30, level: 'L' });
+            
+            item.innerHTML = `
+                <div class="d-flex align-items-center gap-2 flex-grow-1" style="cursor: pointer;" id="qr-thumb-${qrInfo.id}">
+                    <img src="${qrMini.toDataURL()}" style="width: 30px; height: 30px;">
+                    <div style="font-size: 0.7em; line-height: 1.1; overflow: hidden;">
+                        <div class="fw-bold text-truncate" style="max-width: 55px;">${qrInfo.nombre}</div>
+                        <div class="text-muted">${qrInfo.telefono}</div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-link p-0 text-primary btn-goto-qr" title="Editar / Ver en lista" style="text-decoration: none;">✏️</button>
+            `;
+
+            // Click en la miniatura -> Agregar al canvas
+            item.querySelector(`#qr-thumb-${qrInfo.id}`).addEventListener('click', () => {
+                this.agregarQRAlCanvas(qrUrl, this.elements.inputColorQR.value, qrInfo.id);
+            });
+
+            // Click en el lápiz -> Ir a la tarjeta de edición
+            item.querySelector('.btn-goto-qr').addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Llamamos al método del StorageManager para abrir el modal
+                window.storageManager.abrirModalQR(qrInfo);
+            });
+
+            this.elements.quickQRsList.appendChild(item);
+        });
     }
 
     actualizarPanelImagen() {

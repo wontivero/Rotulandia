@@ -199,6 +199,13 @@ h1, h2 {
     transition: all 0.3s ease;
 }
 
+/* Animación para la landing page */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
 /* Estilo para los sliders (range) para que se vean mejor */
 input[type=range] {
     height: 25px;

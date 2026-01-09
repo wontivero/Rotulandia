@@ -145,7 +145,8 @@ export class CanvasRenderer {
             checkboxBorde, checkboxBorde2
         } = state;
 
-        const plantilla = PLANTILLAS[idPlantilla];
+        // Protección contra plantilla indefinida (fallback a 'cuaderno')
+        const plantilla = PLANTILLAS[idPlantilla] || PLANTILLAS['cuaderno'];
         const exportMode = isExporting;
 
         // Verificación de fuentes
