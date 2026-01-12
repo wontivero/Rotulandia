@@ -1,58 +1,70 @@
-// js/storage.js
-import { db, auth, storage } from "./firebase-config.js";
+import { db, auth, storage } from "../firebase-config.js";
 import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { Toast } from '../components/Toast.js';
+import { Modal } from '../components/Modal.js';
 
 export class StorageManager {
-    constructor(uiManager) {
-        this.uiManager = uiManager;
-        this.btnGuardar = document.getElementById('boton-guardar-diseno');
-        this.btnGuardarNuevo = document.getElementById('boton-guardar-nuevo');
-        this.listaDisenos = document.getElementById('lista-disenos');
-        this.contenedorMisDisenos = document.getElementById('mis-disenos-container');
-        
-        // Elementos del Modal
-        this.modalElement = document.getElementById('modalEditarQR');
-        this.modal = new bootstrap.Modal(this.modalElement);
-        this.btnModalGuardar = document.getElementById('btn-modal-guardar');
-        this.btnModalEliminar = document.getElementById('btn-modal-eliminar');
-        this.btnModalToggle = document.getElementById('btn-modal-toggle');
-        
-        this.currentDesignId = null; // Para saber si estamos editando uno existente
-        this.qrsCache = []; // Inicializar caché para evitar errores
-
-        this.initEvents();
+    constructor(controller) {
+        this.controller = controller; // Antes uiManager, ahora controller
+        this.currentDesignId = null;
+        this.qrsCache = [];
     }
 
-    initEvents() {
+    reset() {
+        this.currentDesignId = null;
+    }
+
+    // Método llamado por EditorView
+    initEditorEvents() {
+        // Escuchar evento custom para editar QR desde el panel rápido (desacople)
+        document.addEventListener('editar-qr', (e) => {
+            this.abrirModalQR(e.detail);
+        });
+
+        this.btnGuardar = document.getElementById('boton-guardar-diseno');
+        this.btnGuardarNuevo = document.getElementById('boton-guardar-nuevo');
+        
         if (this.btnGuardar) {
             this.btnGuardar.addEventListener('click', () => this.guardarDiseno(false));
         }
         if (this.btnGuardarNuevo) {
             this.btnGuardarNuevo.addEventListener('click', () => this.guardarDiseno(true));
         }
+    }
+
+    // Método llamado por DashboardView
+    initDashboardEvents() {
+        this.listaDisenos = document.getElementById('lista-disenos');
+        this.contenedorMisDisenos = document.getElementById('mis-disenos-container');
         
-        // Escuchar cambios de autenticación para mostrar/ocultar diseños
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                this.contenedorMisDisenos.classList.remove('d-none');
-                await this.cargarMisQRs(user.uid); // Cargar QRs primero para saber cuáles existen
-                this.cargarMisDisenos(user.uid);   // Luego cargar diseños
-            } else {
-                this.contenedorMisDisenos.classList.add('d-none');
-                this.listaDisenos.innerHTML = '';
-            }
-        });
+        this.modalElement = document.getElementById('modalEditarQR');
+        if (this.modalElement) {
+            this.modal = new bootstrap.Modal(this.modalElement);
+            this.btnModalGuardar = document.getElementById('btn-modal-guardar');
+            this.btnModalEliminar = document.getElementById('btn-modal-eliminar');
+            this.btnModalToggle = document.getElementById('btn-modal-toggle');
+        }
+
+        // Cargar datos si hay usuario
+        const user = auth.currentUser;
+        if (user && this.contenedorMisDisenos) {
+            this.contenedorMisDisenos.classList.remove('d-none');
+            this.cargarMisQRs(user.uid).then(() => this.cargarMisDisenos(user.uid));
+        } else if (this.contenedorMisDisenos) {
+            this.contenedorMisDisenos.classList.add('d-none');
+            if (this.listaDisenos) this.listaDisenos.innerHTML = '';
+        }
     }
 
     async guardarDiseno(comoNuevo = false) {
         const user = auth.currentUser;
         if (!user) {
-            this.uiManager.showToast('Inicia sesión', 'Debes ingresar con Google para guardar tus diseños.', 'warning');
+            Toast.show('Inicia sesión', 'Debes ingresar con Google para guardar tus diseños.', 'warning');
             return;
         }
 
-        const state = this.uiManager.getState();
+        const state = this.controller.getState();
         
         this.btnGuardar.disabled = true;
         this.btnGuardarNuevo.disabled = true;
@@ -61,48 +73,48 @@ export class StorageManager {
         // Limpiamos el estado de cosas que no necesitamos guardar o que son referencias al DOM
         const disenoData = {
             uid: user.uid,
-            nombreDiseno: `${state.inputNombre || ''} ${state.inputApellido || ''}`.trim() || 'Diseño sin nombre',
+            nombreDiseno: `${state.nombre || ''} ${state.apellido || ''}`.trim() || 'Diseño sin nombre',
             createdAt: serverTimestamp(),
-            plantilla: state.selectPlantilla,
+            plantilla: state.plantilla,
             config: {
-                nombre: state.inputNombre,
-                apellido: state.inputApellido,
-                grado: state.inputGrado,
-                colorFondo: state.inputColorFondo,
-                tipoFondo: state.selectTipoFondo,
-                tipoPatron: state.selectTipoPatron,
-                estiloBorde: state.selectEstiloBorde,
-                colorBorde: state.inputColorBorde,
-                grosorBorde: state.inputGrosorBorde,
+                nombre: state.nombre,
+                apellido: state.apellido,
+                grado: state.grado,
+                colorFondo: state.colorFondo,
+                tipoFondo: state.tipoFondo,
+                tipoPatron: state.tipoPatron,
+                estiloBorde: state.estiloBorde,
+                colorBorde: state.colorBorde,
+                grosorBorde: state.grosorBorde,
                 arcoirisBorde: state.checkArcoirisBorde,
-                shiftArcoirisBorde: state.inputShiftArcoirisBorde,
+                shiftArcoirisBorde: state.shiftArcoirisBorde,
                 metalBorde: state.checkMetalBorde,
-                tipoMetalBorde: state.inputTipoMetalBorde,
-                efectoBorde: state.selectEfectoBorde,
-                intensidadEfectoBorde: state.inputIntensidadEfectoBorde,
-                radioBorde: state.inputRadioBorde,
-                fuenteNombre: state.inputFuenteNombre,
-                colorNombre: state.inputColorNombre,
+                tipoMetalBorde: state.tipoMetalBorde,
+                efectoBorde: state.efectoBorde,
+                intensidadEfectoBorde: state.intensidadEfectoBorde,
+                radioBorde: state.radioBorde,
+                fuenteNombre: state.fuenteNombre,
+                colorNombre: state.colorNombre,
                 arcoirisNombre: state.checkArcoirisNombre,
-                shiftArcoirisNombre: state.inputShiftArcoirisNombre,
+                shiftArcoirisNombre: state.shiftArcoirisNombre,
                 metalNombre: state.checkMetalNombre,
-                tipoMetalNombre: state.inputTipoMetalNombre,
-                efectoTextoNombre: state.selectEfectoTextoNombre,
-                intensidadEfectoNombre: state.inputIntensidadEfectoNombre,
-                tamanoNombre: state.inputTamanoNombre,
-                fuenteGrado: state.inputFuenteGrado,
-                colorGrado: state.inputColorGrado,
+                tipoMetalNombre: state.tipoMetalNombre,
+                efectoTextoNombre: state.efectoTextoNombre,
+                intensidadEfectoNombre: state.intensidadEfectoNombre,
+                tamanoNombre: state.tamanoNombre,
+                fuenteGrado: state.fuenteGrado,
+                colorGrado: state.colorGrado,
                 arcoirisGrado: state.checkArcoirisGrado,
-                shiftArcoirisGrado: state.inputShiftArcoirisGrado,
+                shiftArcoirisGrado: state.shiftArcoirisGrado,
                 metalGrado: state.checkMetalGrado,
-                tipoMetalGrado: state.inputTipoMetalGrado,
-                efectoTextoGrado: state.selectEfectoTextoGrado,
-                intensidadEfectoGrado: state.inputIntensidadEfectoGrado,
-                tamanoGrado: state.inputTamanoGrado,
-                colorDegradado1: state.inputColorDegradado1,
-                colorDegradado2: state.inputColorDegradado2,
-                conBorde: state.checkboxBorde,
-                conBorde2: state.checkboxBorde2,
+                tipoMetalGrado: state.tipoMetalGrado,
+                efectoTextoGrado: state.efectoTextoGrado,
+                intensidadEfectoGrado: state.intensidadEfectoGrado,
+                tamanoGrado: state.tamanoGrado,
+                colorDegradado1: state.colorDegradado1,
+                colorDegradado2: state.colorDegradado2,
+                conBorde: state.conBorde,
+                conBorde2: state.conBorde2,
                 offsets: state.offsets,
                 fondoProps: state.fondoProps,
             }
@@ -110,7 +122,7 @@ export class StorageManager {
 
         try {
             // Generar miniatura (Thumbnail)
-            const thumbnailBase64 = this.uiManager.renderer.canvas.toDataURL('image/jpeg', 0.5); // Calidad media
+            const thumbnailBase64 = this.controller.renderer.canvas.toDataURL('image/jpeg', 0.5); // Calidad media
             const thumbnailPath = `usuarios/${user.uid}/thumbnails/${Date.now()}_thumb.jpg`;
             disenoData.thumbnailUrl = await this.subirImagenBase64(thumbnailBase64, thumbnailPath);
 
@@ -156,19 +168,19 @@ export class StorageManager {
             if (this.currentDesignId && !comoNuevo) {
                 // Actualizar existente
                 await updateDoc(doc(db, "disenos", this.currentDesignId), disenoData);
-                this.uiManager.showToast('¡Guardado!', 'Tu diseño se ha actualizado correctamente.', 'success');
+                Toast.show('¡Guardado!', 'Tu diseño se ha actualizado correctamente.', 'success');
             } else {
                 // Crear nuevo
                 const docRef = await addDoc(collection(db, "disenos"), disenoData);
                 this.currentDesignId = docRef.id; // Ahora estamos trabajando sobre este
-                this.uiManager.showToast('¡Creado!', 'Diseño guardado como nuevo en tu colección.', 'success');
+                Toast.show('¡Creado!', 'Diseño guardado como nuevo en tu colección.', 'success');
             }
             
             this.cargarMisDisenos(user.uid); // Recargar lista
             this.cargarMisQRs(user.uid); // Por si se generaron QRs nuevos
         } catch (error) {
             console.error("Error al guardar diseño:", error);
-            this.uiManager.showToast('Error', 'Hubo un problema al guardar el diseño.', 'error');
+            Toast.show('Error', 'Hubo un problema al guardar el diseño.', 'error');
         } finally {
             this.btnGuardar.disabled = false;
             this.btnGuardarNuevo.disabled = false;
@@ -186,6 +198,28 @@ export class StorageManager {
         await uploadBytes(storageRef, blob);
         const url = await getDownloadURL(storageRef);
         return url;
+    }
+
+    async loadDesignById(docId, isDuplicate = false) {
+        try {
+            const docRef = doc(db, "disenos", docId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Si es duplicado, pasamos null como ID para que se guarde como nuevo
+                this.cargarDisenoEnCanvas(data.config, isDuplicate ? null : docId);
+                
+                if (isDuplicate) {
+                    Toast.show('Copia lista', 'Diseño duplicado correctamente. Se guardará como uno nuevo.', 'success');
+                }
+            } else {
+                Toast.show('Error', 'El diseño no existe.', 'error');
+            }
+        } catch (error) {
+            console.error("Error al cargar diseño por ID:", error);
+            Toast.show('Error', 'No se pudo cargar el diseño.', 'error');
+        }
     }
 
     async cargarMisDisenos(uid) {
@@ -207,10 +241,14 @@ export class StorageManager {
                 const card = document.createElement('div');
                 card.className = 'col-md-4 mb-3';
                 
-                // Usar thumbnail si existe, sino un placeholder
+                // Thumbnail mejorado con contenedor de relación de aspecto
                 const thumbHtml = data.thumbnailUrl 
-                    ? `<img src="${data.thumbnailUrl}" class="card-img-top" alt="Vista previa" style="height: 150px; object-fit: contain; background-color: #f8f9fa; padding: 5px;">`
-                    : `<div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;"><span class="text-muted">Sin vista previa</span></div>`;
+                    ? `<div class="position-relative" style="height: 180px; background-color: #f8f9fa; overflow: hidden;">
+                         <img src="${data.thumbnailUrl}" alt="Vista previa" style="width: 100%; height: 100%; object-fit: contain; padding: 10px;">
+                       </div>`
+                    : `<div class="d-flex align-items-center justify-content-center bg-light text-muted" style="height: 180px;">
+                         <div class="text-center"><span style="font-size: 2rem;">🖼️</span><br><small>Sin vista previa</small></div>
+                       </div>`;
 
                 // Buscar si hay un QR en la configuración de este diseño
                 // Buscamos en las imágenes guardadas alguna que sea un QR (data:image) y que tenga un ID asociado si lo guardamos
@@ -268,23 +306,30 @@ export class StorageManager {
                 }
 
                 card.innerHTML = `
-                    <div class="card h-100 shadow-sm diseno-card" style="cursor: pointer;">
+                    <div class="card h-100 border-0 shadow-sm diseno-card" style="border-radius: 12px; overflow: hidden; cursor: pointer;">
                         ${thumbHtml}
-                        <div class="card-body">
-                            <h5 class="card-title text-truncate fw-bold text-primary" title="${nombreMostrar}">${nombreMostrar}</h5>
-                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                <small class="text-muted">${data.plantilla}</small>
-                                <small class="text-muted">${data.createdAt ? data.createdAt.toDate().toLocaleDateString() : 'Hoy'}</small>
+                        <div class="card-body d-flex flex-column p-3">
+                            <div class="mb-2">
+                                <h5 class="card-title fw-bold text-dark text-truncate mb-1" title="${nombreMostrar}">${nombreMostrar}</h5>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-light text-secondary border fw-normal">${data.plantilla}</span>
+                                    <span class="badge bg-light text-secondary border fw-normal">📅 ${data.createdAt ? data.createdAt.toDate().toLocaleDateString() : 'Hoy'}</span>
+                                </div>
                             </div>
                             
-                            <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
-                                ${qrStatusHtml}
+                            <div class="mt-auto">
+                                <div class="bg-light rounded p-2 mb-3 d-flex justify-content-between align-items-center" style="font-size: 0.9rem;">
+                                    ${qrStatusHtml}
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary rounded-pill fw-bold btn-sm btn-cargar" data-id="${docSnap.id}">✏️ Editar Diseño</button>
+                                    <div class="row g-2">
+                                        <div class="col-6"><button class="btn btn-outline-secondary rounded-pill btn-sm w-100 btn-duplicar" data-id="${docSnap.id}">📑 Copiar</button></div>
+                                        <div class="col-6"><button class="btn btn-outline-danger rounded-pill btn-sm w-100 btn-eliminar" data-id="${docSnap.id}">🗑️ Borrar</button></div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-primary flex-grow-1 btn-cargar" data-id="${docSnap.id}">✏️ Editar</button>
-                            <button class="btn btn-sm btn-outline-secondary btn-duplicar" data-id="${docSnap.id}" title="Crear copia">📑 Duplicar</button>
-                            <button class="btn btn-sm btn-outline-danger btn-eliminar" data-id="${docSnap.id}" title="Eliminar">🗑️</button>
                         </div>
                     </div>
                 `;
@@ -292,20 +337,24 @@ export class StorageManager {
                 // Evento para cargar
                 card.querySelector('.btn-cargar').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.cargarDisenoEnCanvas(data.config, docSnap.id);
+                    // Guardar ID y redirigir al editor
+                    localStorage.setItem('pendingDesignId', docSnap.id);
+                    window.location.hash = '#editor';
                 });
 
                 // Evento para duplicar (Cargar como nuevo)
                 card.querySelector('.btn-duplicar').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.cargarDisenoEnCanvas(data.config, null); // null ID = Nuevo diseño
-                    this.uiManager.showToast('Duplicado', 'Diseño cargado como copia. Al guardar se creará uno nuevo.', 'info');
+                    localStorage.setItem('pendingDesignId', docSnap.id);
+                    localStorage.setItem('isDuplicate', 'true');
+                    window.location.hash = '#editor';
+                    Toast.show('Duplicado', 'Diseño cargado como copia. Al guardar se creará uno nuevo.', 'info');
                 });
 
                 // Evento para eliminar
                 card.querySelector('.btn-eliminar').addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    const confirmado = await this.uiManager.showConfirm(
+                    const confirmado = await Modal.confirm(
                         'Eliminar Diseño', 
                         '¿Estás seguro de que quieres eliminar este diseño? <b>Esta acción no se puede deshacer.</b>',
                         '🗑️',
@@ -318,10 +367,10 @@ export class StorageManager {
                             // Nota: Las imágenes en Storage quedan huérfanas por ahora (se puede limpiar con Cloud Functions en un futuro)
                             this.cargarMisDisenos(uid); // Recargar lista
                             if (this.currentDesignId === docSnap.id) this.currentDesignId = null; // Resetear si era el actual
-                            this.uiManager.showToast('Eliminado', 'El diseño ha sido eliminado.', 'success');
+                            Toast.show('Eliminado', 'El diseño ha sido eliminado.', 'success');
                         } catch (err) {
                             console.error("Error al eliminar:", err);
-                            this.uiManager.showToast('Error', 'No se pudo eliminar el diseño.', 'error');
+                            Toast.show('Error', 'No se pudo eliminar el diseño.', 'error');
                         }
                     }
                 });
@@ -342,7 +391,7 @@ export class StorageManager {
                 if (btnInfoQr) {
                     btnInfoQr.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        this.uiManager.showAlert(
+                        Modal.alert(
                             '💡 ¿Para qué sirve el QR?',
                             'Si agregas un código QR a tu diseño, quien encuentre los útiles perdidos podrá escanearlo y contactarte por WhatsApp para devolverlos.<br><br><b>¡Es gratis y muy seguro!</b> Edita este diseño y agrega un QR desde el panel.',
                             '📱'
@@ -367,7 +416,7 @@ export class StorageManager {
             this.qrsCache = []; // Cache para búsqueda rápida
             
             if (querySnapshot.empty) {
-                this.uiManager.renderQuickQRs([]);
+                this.controller.renderQuickQRs([]);
                 return;
             }
 
@@ -381,7 +430,7 @@ export class StorageManager {
             });
 
             // Actualizar la lista rápida en el panel de control
-            this.uiManager.renderQuickQRs(qrsList);
+            this.controller.renderQuickQRs(qrsList);
 
         } catch (error) {
             console.error("Error al cargar QRs:", error);
@@ -413,7 +462,7 @@ export class StorageManager {
         this.btnModalGuardar.addEventListener('click', async () => {
             const nuevoTel = document.getElementById('modal-qr-telefono').value.trim();
             await updateDoc(doc(db, "qrs", qrData.id), { telefono: nuevoTel });
-            this.uiManager.showToast('Actualizado', 'El teléfono del QR ha sido actualizado.', 'success');
+            Toast.show('Actualizado', 'El teléfono del QR ha sido actualizado.', 'success');
             this.modal.hide();
             this.cargarMisQRs(auth.currentUser.uid);
             this.cargarMisDisenos(auth.currentUser.uid); // Refrescar diseños para actualizar estado
@@ -436,9 +485,9 @@ export class StorageManager {
             });
 
             if (estaEnUso) {
-                this.uiManager.showAlert('No se puede eliminar', '⛔ Este QR está siendo utilizado en uno de tus diseños guardados.<br><br>Si realmente quieres borrarlo, primero elimina el diseño que lo contiene.', '🚫');
+                Modal.alert('No se puede eliminar', '⛔ Este QR está siendo utilizado en uno de tus diseños guardados.<br><br>Si realmente quieres borrarlo, primero elimina el diseño que lo contiene.', '🚫');
             } else {
-                const confirmado = await this.uiManager.showConfirm(
+                const confirmado = await Modal.confirm(
                     'Eliminar QR',
                     '⚠️ <b>¿Estás seguro?</b><br>Si ya has impreso etiquetas con este código, dejarán de funcionar y no podrán ser escaneadas por nadie.',
                     '🗑️', 'Sí, eliminar QR'
@@ -449,7 +498,7 @@ export class StorageManager {
                 this.modal.hide();
                 this.cargarMisQRs(auth.currentUser.uid);
                 this.cargarMisDisenos(auth.currentUser.uid); // Refrescar diseños para actualizar estado
-                this.uiManager.showToast('QR Eliminado', 'El código QR ha sido borrado permanentemente.', 'success');
+                Toast.show('QR Eliminado', 'El código QR ha sido borrado permanentemente.', 'success');
                 }
             }
         });
@@ -464,9 +513,9 @@ export class StorageManager {
             await updateDoc(doc(db, "qrs", qrData.id), { activo: newState });
             
             if (newState) {
-                this.uiManager.showToast('QR Activado', 'Ahora redirigirá a WhatsApp correctamente.', 'success');
+                Toast.show('QR Activado', 'Ahora redirigirá a WhatsApp correctamente.', 'success');
             } else {
-                this.uiManager.showToast('QR Pausado', 'Al escanearlo se mostrará un mensaje de inactivo.', 'warning');
+                Toast.show('QR Pausado', 'Al escanearlo se mostrará un mensaje de inactivo.', 'warning');
             }
             this.modal.hide();
             this.cargarMisQRs(auth.currentUser.uid);
@@ -477,114 +526,8 @@ export class StorageManager {
     }
 
     cargarDisenoEnCanvas(config, docId) {
-        this.currentDesignId = docId; // Establecer como diseño actual para actualizaciones
-        
-        // Restaurar valores en inputs
-        const elements = this.uiManager.elements;
-        
-        elements.inputNombre.value = config.nombre || '';
-        elements.inputApellido.value = config.apellido || '';
-        elements.inputGrado.value = config.grado || '';
-        elements.inputColorFondo.value = config.colorFondo || '#E0F7FA';
-        elements.selectTipoFondo.value = config.tipoFondo || 'solido';
-        elements.selectTipoPatron.value = config.tipoPatron || 'ninguno';
-        elements.selectEstiloBorde.value = config.estiloBorde || 'simple';
-        elements.inputColorBorde.value = config.colorBorde || '#004D40';
-        elements.inputGrosorBorde.value = config.grosorBorde || 5;
-        elements.checkArcoirisBorde.checked = config.arcoirisBorde || false;
-        elements.inputShiftArcoirisBorde.value = config.shiftArcoirisBorde || 0;
-        elements.checkMetalBorde.checked = config.metalBorde || false;
-        elements.inputTipoMetalBorde.value = config.tipoMetalBorde || 0;
-        elements.selectEfectoBorde.value = config.efectoBorde || 'ninguno';
-        elements.inputIntensidadEfectoBorde.value = config.intensidadEfectoBorde || 5;
-        elements.inputRadioBorde.value = config.radioBorde || 10;
-        
-        elements.inputFuenteNombre.value = config.fuenteNombre;
-        elements.inputColorNombre.value = config.colorNombre;
-        elements.checkArcoirisNombre.checked = config.arcoirisNombre || false;
-        elements.inputShiftArcoirisNombre.value = config.shiftArcoirisNombre || 0;
-        elements.checkMetalNombre.checked = config.metalNombre || false;
-        elements.inputTipoMetalNombre.value = config.tipoMetalNombre || 0;
-        elements.selectEfectoTextoNombre.value = config.efectoTextoNombre;
-        elements.inputIntensidadEfectoNombre.value = config.intensidadEfectoNombre || 5;
-        elements.inputTamanoNombre.value = config.tamanoNombre || 1.0;
-        
-        elements.inputFuenteGrado.value = config.fuenteGrado;
-        elements.inputColorGrado.value = config.colorGrado;
-        elements.checkArcoirisGrado.checked = config.arcoirisGrado || false;
-        elements.inputShiftArcoirisGrado.value = config.shiftArcoirisGrado || 0;
-        elements.checkMetalGrado.checked = config.metalGrado || false;
-        elements.inputTipoMetalGrado.value = config.tipoMetalGrado || 0;
-        elements.selectEfectoTextoGrado.value = config.efectoTextoGrado;
-        elements.inputIntensidadEfectoGrado.value = config.intensidadEfectoGrado || 5;
-        elements.inputTamanoGrado.value = config.tamanoGrado || 1.0;
-        
-        elements.inputColorDegradado1.value = config.colorDegradado1;
-        elements.inputColorDegradado2.value = config.colorDegradado2;
-        
-        elements.checkboxBorde.checked = config.conBorde;
-        if (config.conBorde2 !== undefined) elements.checkboxBorde2.checked = config.conBorde2;
-        
-        // Actualizar visibilidad del control de radio
-        elements.checkboxBorde.dispatchEvent(new Event('change'));
-        
-        // Restaurar plantilla (dispara evento change, así que cuidado con resetear estado)
-        // Usamos un valor por defecto si viene vacío para evitar errores
-        const plantillaToLoad = config.plantilla || 'cuaderno';
-        elements.selectPlantilla.value = plantillaToLoad;
-        // Disparamos evento manualmente para que se ajuste la UI (bordes combo, etc)
-        // IMPORTANTE: Esto resetea offsets en ui-manager, por eso restauramos offsets DESPUÉS
-        elements.selectPlantilla.dispatchEvent(new Event('change'));
-
-        // Restaurar estado interno (offsets y fondo) DESPUÉS del cambio de plantilla
-        this.uiManager.state.offsets = config.offsets || {};
-        this.uiManager.state.fondoProps = config.fondoProps || { x: 0, y: 0, scale: 1 };
-
-        // Restaurar imágenes
-        this.uiManager.state.imagenesEnCanvas = [];
-        if (config.imagenes && config.imagenes.length > 0) {
-            config.imagenes.forEach(imgConfig => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous"; // IMPORTANTE: Evita el error "Tainted canvases"
-                img.src = imgConfig.src;
-                img.onload = () => {
-                    this.uiManager.state.imagenesEnCanvas.push({
-                        img: img,
-                        x: imgConfig.x,
-                        y: imgConfig.y,
-                        scale: imgConfig.scale,
-                        effect: imgConfig.effect,
-                        wBase: imgConfig.wBase,
-                        hBase: imgConfig.hBase
-                    });
-                    this.uiManager.updatePreview();
-                };
-            });
-        }
-
-        // Restaurar fondo si es imagen
-        if (config.tipoFondo === 'imagen' && config.bgImageSrc) {
-            const bgImg = new Image();
-            bgImg.crossOrigin = "Anonymous";
-            bgImg.src = config.bgImageSrc;
-            bgImg.onload = () => {
-                this.uiManager.state.imagenFondoPropia = bgImg;
-                this.uiManager.updatePreview();
-            };
-        }
-
-        // Disparar eventos para actualizar UI visualmente (mostrar/ocultar paneles)
-        elements.selectTipoFondo.dispatchEvent(new Event('input'));
-        
-        // Actualizar visibilidad de controles arcoíris
-        this.uiManager.toggleColorControls();
-
-        // Actualizar vista previa final
-        setTimeout(() => this.uiManager.updatePreview(), 100); // Pequeño delay para asegurar carga
-        
-        // Scroll arriba para ver el resultado
-        document.querySelector('.configurador').scrollIntoView({ behavior: 'smooth' });
-        
-        this.uiManager.showToast('Cargado', 'Diseño listo para editar.', 'success');
+        this.currentDesignId = docId;
+        // Delegamos toda la lógica de restauración al controlador
+        this.controller.loadConfig(config, docId);
     }
 }

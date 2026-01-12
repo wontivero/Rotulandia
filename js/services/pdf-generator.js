@@ -1,5 +1,5 @@
 // js/pdf-generator.js
-import { mmToPx, PLANTILLAS } from './config.js';
+import { mmToPx, PLANTILLAS } from '../config.js';
 
 export class PDFGenerator {
     async generarPDF(state, renderer) {
@@ -10,7 +10,7 @@ export class PDFGenerator {
         boton.textContent = 'Generando PDF...';
         boton.disabled = true;
 
-        const plantilla = PLANTILLAS[state.selectPlantilla];
+        const plantilla = PLANTILLAS[state.plantilla];
         const dataURL = renderer.canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -76,7 +76,7 @@ export class PDFGenerator {
         }
 
         // Construir nombre de archivo personalizado
-        const nombreArchivo = state.inputNombre ? `${state.inputNombre}-${state.inputApellido || ''}` : 'Rotulandia';
+        const nombreArchivo = state.nombre ? `${state.nombre}-${state.apellido || ''}` : 'Rotulandia';
         // Limpiar caracteres no válidos para nombres de archivo y agregar marca
         doc.save(`${nombreArchivo.replace(/[^a-z0-9]/gi, '_')}-Rotulandia.com.ar.pdf`);
         boton.textContent = textoOriginal;
@@ -89,7 +89,7 @@ export class PDFGenerator {
         const link = document.createElement('a');
         
         // Construir nombre de archivo personalizado
-        const nombreArchivo = state.inputNombre ? `${state.inputNombre}-${state.inputApellido || ''}` : 'Rotulandia';
+        const nombreArchivo = state.nombre ? `${state.nombre}-${state.apellido || ''}` : 'Rotulandia';
         link.download = `${nombreArchivo.replace(/[^a-z0-9]/gi, '_')}-Rotulandia.com.ar.png`;
         link.href = renderer.canvas.toDataURL('image/png');
         link.click();

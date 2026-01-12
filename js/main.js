@@ -1,14 +1,18 @@
 // js/main.js
-import { CanvasRenderer } from './canvas-renderer.js';
-import { PDFGenerator } from './pdf-generator.js';
-import { UIManager } from './ui-manager.js';
-import { AuthManager } from './auth.js';
-import { StorageManager } from './storage.js';
+import { AuthManager } from './services/auth.js';
+import { Navbar } from './components/Navbar.js';
+import { router } from './router.js';
+import { store } from './store.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const renderer = new CanvasRenderer('canvas-rotulo', 'spinner-carga');
-    const pdfGenerator = new PDFGenerator();
-    const uiManager = new UIManager(renderer, pdfGenerator);
-    new AuthManager();
-    window.storageManager = new StorageManager(uiManager);
+    // Inicializar Router
+    router();
+
+    // Suscribirse al store para actualizar UI global si es necesario
+    store.subscribe((state) => {
+        // Aquí podríamos actualizar el navbar automáticamente
+    });
+
+    const authManager = new AuthManager();
+    new Navbar(authManager);
 });

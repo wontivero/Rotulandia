@@ -125,31 +125,31 @@ export class CanvasRenderer {
 
     async render(state, isExporting = false) {
         // Mapeo de variables del estado (UIManager) a variables locales
-        const nombre = state.inputNombre;
-        const apellido = state.inputApellido;
-        const grado = state.inputGrado;
-        const colorFondo = state.inputColorFondo;
-        const tipoPatron = state.selectTipoPatron;
-        const estiloBorde = state.selectEstiloBorde;
-        const tipoFondo = state.selectTipoFondo;
-        const idPlantilla = state.selectPlantilla;
-        const colorBorde = state.inputColorBorde;
-        const grosorBorde = parseInt(state.inputGrosorBorde, 10);
+        const nombre = state.nombre;
+        const apellido = state.apellido;
+        const grado = state.grado;
+        const colorFondo = state.colorFondo;
+        const tipoPatron = state.tipoPatron;
+        const estiloBorde = state.estiloBorde;
+        const tipoFondo = state.tipoFondo;
+        const idPlantilla = state.plantilla;
+        const colorBorde = state.colorBorde;
+        const grosorBorde = parseInt(state.grosorBorde, 10);
 
         const {
-            inputFuenteNombre, inputFuenteGrado,
-            inputColorNombre, inputColorGrado, inputTamanoNombre, inputTamanoGrado,
-            selectEfectoTextoNombre, selectEfectoTextoGrado,
+            fuenteNombre, fuenteGrado,
+            colorNombre, colorGrado, tamanoNombre, tamanoGrado,
+            efectoTextoNombre, efectoTextoGrado,
             checkArcoirisNombre, checkArcoirisGrado,
-            checkMetalNombre, checkMetalGrado, inputTipoMetalNombre, inputTipoMetalGrado,
-            inputShiftArcoirisNombre, inputShiftArcoirisGrado,
-            inputIntensidadEfectoNombre, inputIntensidadEfectoGrado,
-            inputColorDegradado1, inputColorDegradado2, imagenFondoPropia,
+            checkMetalNombre, checkMetalGrado, tipoMetalNombre, tipoMetalGrado,
+            shiftArcoirisNombre, shiftArcoirisGrado,
+            intensidadEfectoNombre, intensidadEfectoGrado,
+            colorDegradado1, colorDegradado2, imagenFondoPropia,
             fondoProps, imagenesEnCanvas, offsets, indiceImagenSeleccionada, selectedTextKey,
-            checkboxBorde, checkboxBorde2,
-            checkArcoirisBorde, inputShiftArcoirisBorde, checkMetalBorde, inputTipoMetalBorde,
-            selectEfectoBorde, inputIntensidadEfectoBorde,
-            inputRadioBorde
+            conBorde, conBorde2,
+            checkArcoirisBorde, shiftArcoirisBorde, checkMetalBorde, tipoMetalBorde,
+            efectoBorde, intensidadEfectoBorde,
+            radioBorde
         } = state;
 
         // Protección contra plantilla indefinida (fallback a 'cuaderno')
@@ -158,10 +158,10 @@ export class CanvasRenderer {
 
         // Verificación de fuentes
         // Aseguramos un valor por defecto si inputFuenteNombre es undefined o vacío
-        const fuenteNombre = inputFuenteNombre || "'Fredoka', sans-serif";
-        const fuenteGrado = inputFuenteGrado || "'Fredoka', sans-serif";
-        const fontStringNombre = `20px ${fuenteNombre}`;
-        const fontStringGrado = `20px ${fuenteGrado}`;
+        const fontNombre = fuenteNombre || "'Fredoka', sans-serif";
+        const fontGrado = fuenteGrado || "'Fredoka', sans-serif";
+        const fontStringNombre = `20px ${fontNombre}`;
+        const fontStringGrado = `20px ${fontGrado}`;
         const fontsToLoad = [];
         if (!document.fonts.check(fontStringNombre)) fontsToLoad.push(document.fonts.load(fontStringNombre));
         if (!document.fonts.check(fontStringGrado)) fontsToLoad.push(document.fonts.load(fontStringGrado));
@@ -182,7 +182,7 @@ export class CanvasRenderer {
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Calcular radio basado en el slider (0-50%)
-        const radioFactor = parseInt(inputRadioBorde || 10, 10) / 100;
+        const radioFactor = parseInt(radioBorde || 10, 10) / 100;
         const radio = Math.min(this.canvas.width, this.canvas.height) * radioFactor;
         const margenClip = 3;
 
@@ -190,7 +190,7 @@ export class CanvasRenderer {
         ctx.beginPath();
         if (plantilla.is_combo) {
             plantilla.areas.forEach((area, index) => {
-                const usarRedondeo = index === 0 ? checkboxBorde : checkboxBorde2;
+                const usarRedondeo = index === 0 ? conBorde : conBorde2;
                 const currentRadio = usarRedondeo ? radio : 0;
                 const x = mmToPx(area.x_mm) + margenClip;
                 const y = mmToPx(area.y_mm) + margenClip;
@@ -199,7 +199,7 @@ export class CanvasRenderer {
                 ctx.roundRect(x, y, w, h, [currentRadio]);
             });
         } else {
-            const currentRadio = checkboxBorde ? radio : 0;
+            const currentRadio = conBorde ? radio : 0;
             ctx.roundRect(margenClip, margenClip, this.canvas.width - margenClip * 2, this.canvas.height - margenClip * 2, [currentRadio]);
         }
         ctx.clip();
@@ -209,8 +209,8 @@ export class CanvasRenderer {
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         } else if (tipoFondo === 'degradado') {
             const degradado = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-            degradado.addColorStop(0, inputColorDegradado1);
-            degradado.addColorStop(1, inputColorDegradado2);
+            degradado.addColorStop(0, colorDegradado1);
+            degradado.addColorStop(1, colorDegradado2);
             ctx.fillStyle = degradado;
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         } else if (tipoFondo === 'imagen' && imagenFondoPropia) {
@@ -262,7 +262,7 @@ export class CanvasRenderer {
                 });
                 if (areaIndex !== -1) {
                     const area = plantilla.areas[areaIndex];
-                    const usarRedondeo = areaIndex === 0 ? checkboxBorde : checkboxBorde2;
+                    const usarRedondeo = areaIndex === 0 ? conBorde : conBorde2;
                     const currentRadio = usarRedondeo ? radio : 0;
                     ctx.beginPath();
                     const ax = mmToPx(area.x_mm) + margenClip;
@@ -331,7 +331,7 @@ export class CanvasRenderer {
                     const width = ctx.measureText(texto).width;
                     const gradient = ctx.createLinearGradient(itemX, 0, itemX + width, 0);
                     // Rotación de colores basada en el slider (0 a 360)
-                    const shift = parseInt(arcoirisShiftInput || 0, 10);
+                    const shift = parseInt(shiftArcoirisNombre || 0, 10); // Nota: aquí se usaba el parámetro, pero para simplificar usamos la variable local si coincide
                     for (let i = 0; i <= 10; i++) {
                         const p = i / 10;
                         const hue = (p * 360 + shift) % 360;
@@ -446,9 +446,9 @@ export class CanvasRenderer {
             });
         };
 
-        dibujarElementoTexto('nombre', nombre, inputColorNombre, fuenteNombre, inputTamanoNombre, selectEfectoTextoNombre, inputIntensidadEfectoNombre, checkArcoirisNombre, inputShiftArcoirisNombre, checkMetalNombre, inputTipoMetalNombre);
-        dibujarElementoTexto('apellido', apellido, inputColorNombre, fuenteNombre, inputTamanoNombre, selectEfectoTextoNombre, inputIntensidadEfectoNombre, checkArcoirisNombre, inputShiftArcoirisNombre, checkMetalNombre, inputTipoMetalNombre);
-        dibujarElementoTexto('grado', grado, inputColorGrado, fuenteGrado, inputTamanoGrado, selectEfectoTextoGrado, inputIntensidadEfectoGrado, checkArcoirisGrado, inputShiftArcoirisGrado, checkMetalGrado, inputTipoMetalGrado, true);
+        dibujarElementoTexto('nombre', nombre, colorNombre, fontNombre, tamanoNombre, efectoTextoNombre, intensidadEfectoNombre, checkArcoirisNombre, shiftArcoirisNombre, checkMetalNombre, tipoMetalNombre);
+        dibujarElementoTexto('apellido', apellido, colorNombre, fontNombre, tamanoNombre, efectoTextoNombre, intensidadEfectoNombre, checkArcoirisNombre, shiftArcoirisNombre, checkMetalNombre, tipoMetalNombre);
+        dibujarElementoTexto('grado', grado, colorGrado, fontGrado, tamanoGrado, efectoTextoGrado, intensidadEfectoGrado, checkArcoirisGrado, shiftArcoirisGrado, checkMetalGrado, tipoMetalGrado, true);
 
         ctx.restore();
 
@@ -459,7 +459,7 @@ export class CanvasRenderer {
         let strokeStyle = colorBorde;
         if (checkArcoirisBorde) {
              const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-             const shift = parseInt(inputShiftArcoirisBorde || 0, 10);
+             const shift = parseInt(shiftArcoirisBorde || 0, 10);
              for (let i = 0; i <= 10; i++) {
                 const p = i / 10;
                 const hue = (p * 360 + shift) % 360;
@@ -468,7 +468,7 @@ export class CanvasRenderer {
              strokeStyle = gradient;
         } else if (checkMetalBorde) {
              const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-             const type = parseInt(inputTipoMetalBorde || 0, 10);
+             const type = parseInt(tipoMetalBorde || 0, 10);
              if (type === 0) { // Oro
                 gradient.addColorStop(0, "#FDB931"); gradient.addColorStop(0.3, "#FFFFAC"); gradient.addColorStop(0.6, "#D19C1D"); gradient.addColorStop(1, "#C58808");
             } else if (type === 1) { // Plata
@@ -491,7 +491,7 @@ export class CanvasRenderer {
             ctx.beginPath();
             if (plantilla.is_combo) {
                 plantilla.areas.forEach((area, index) => {
-                    const usarRedondeo = index === 0 ? checkboxBorde : checkboxBorde2;
+                    const usarRedondeo = index === 0 ? conBorde : conBorde2;
                     const currentRadio = usarRedondeo ? radio : 0;       
                     const x = mmToPx(area.x_mm) + insetVal;
                     const y = mmToPx(area.y_mm) + insetVal;
@@ -502,7 +502,7 @@ export class CanvasRenderer {
             } else {
                 const wBorde = this.canvas.width - insetVal * 2;
                 const hBorde = this.canvas.height - insetVal * 2;
-                const currentRadio = checkboxBorde ? radio : 0;
+                const currentRadio = conBorde ? radio : 0;
                 ctx.roundRect(insetVal, insetVal, wBorde, hBorde, [currentRadio]);
             }
         };
@@ -565,8 +565,8 @@ export class CanvasRenderer {
         };
 
         // 2. Aplicar Efectos (que llaman a dibujarEstilo)
-        const efecto = selectEfectoBorde || 'ninguno';
-        const intensidadBorde = parseInt(inputIntensidadEfectoBorde || 5, 10);
+        const efecto = efectoBorde || 'ninguno';
+        const intensidadBorde = parseInt(intensidadEfectoBorde || 5, 10);
 
         if (efecto === 'sombra_hard') {
             // Sombra sólida desplazada (Pop Art)
