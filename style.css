@@ -12,7 +12,7 @@ h1, h2 {
 
 .configurador {
     display: flex;
-    gap: 40px;
+    gap: 20px;
     align-items: flex-start; /* Importante para que sticky funcione */
 }
 
@@ -21,13 +21,14 @@ h1, h2 {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    flex: 1; /* Ocupa el espacio restante */
+    flex: 0 0 420px; /* Ancho fijo y más compacto para los controles */
+    min-width: 300px;
 }
 
 .resultado {
     position: sticky; /* ¡Magia! */
     top: 20px; /* Se queda pegado a 20px del borde superior */
-    flex-basis: 500px; /* Ancho base aumentado para ver mejor */
+    flex: 1; /* Ahora el diseño ocupa todo el espacio disponible */
     max-height: calc(100vh - 40px); /* Se adapta al alto de la pantalla */
     overflow-y: auto; /* Permite scroll interno si es necesario */
 }
@@ -299,4 +300,20 @@ footer {
     color: #3498db;
     transform: translateY(-3px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* Ajuste Responsivo: En tablets y móviles, apilar verticalmente */
+@media (max-width: 992px) {
+    .configurador {
+        flex-direction: column-reverse; /* Canvas arriba, Controles abajo para evitar saltos */
+    }
+    .controles {
+        width: 100%;
+        flex: none;
+    }
+    .resultado {
+        position: static;
+        width: 100%;
+        flex: none;
+    }
 }

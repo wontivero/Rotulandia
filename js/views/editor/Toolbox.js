@@ -127,7 +127,7 @@ export class Toolbox {
 
         // Plantilla
         if (els.plantilla) {
-            els.plantilla.addEventListener('change', () => {
+            els.plantilla.addEventListener('change', () => {   
                 this.callbacks.onPlantillaChange?.(els.plantilla.value);
             });
         }
@@ -245,10 +245,20 @@ export class Toolbox {
     }
 
     resaltarControl(tipo) {
-        // Lógica de scrollIntoView
         const map = { 'nombre': 'grupo-nombre', 'grado': 'grupo-grado', 'imagen': 'panel-imagen-seleccionada' };
+        
+        // 1. Limpiar resaltado de todos los grupos
+        Object.values(map).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('grupo-destacado');
+        });
+
+        // 2. Resaltar solo el activo (Sin Scroll)
         const id = map[tipo];
-        if (id) document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('grupo-destacado');
+        }
     }
 
     mostrarBotonesAccion() {

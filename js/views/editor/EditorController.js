@@ -19,6 +19,15 @@ export default class EditorController {
             fondoProps: { x: 0, y: 0, scale: 1 }
         };
 
+        // Variables de interacción (Mouse)
+        this.isDragging = false;
+        this.isResizing = false;
+        this.draggingElement = null;
+        this.startX = 0;
+        this.startY = 0;
+        this.initialResizeDist = 0;
+        this.initialScale = 1.0;
+
         // Inicializar Toolbox con callbacks
         this.toolbox = new Toolbox({
             onUpdate: () => this.updatePreview(),
@@ -178,11 +187,11 @@ export default class EditorController {
         // Lógica extra de bordes si es combo...
         const plantillaConfig = PLANTILLAS[val];
         if (plantillaConfig && plantillaConfig.is_combo) {
-            this.toolbox.elements.grupoBorde2.style.display = 'flex';
+            if (this.toolbox.elements.grupoBorde2) this.toolbox.elements.grupoBorde2.style.display = 'flex';
             this.toolbox.elements.labelConBorde.textContent = 'Redondear Cuaderno';
         } else {
-            this.toolbox.elements.grupoBorde2.style.display = 'none';
-            this.toolbox.elements.labelConBorde.textContent = 'Redondear Bordes';
+           if (this.toolbox.elements.grupoBorde2) this.toolbox.elements.grupoBorde2.style.display = 'none';
+           this.toolbox.elements.labelConBorde.textContent = 'Redondear Bordes';
         }
         this.updatePreview();
     }
@@ -285,26 +294,175 @@ export default class EditorController {
     // --- CANVAS EVENTS ---
     initCanvasEvents() {
         const canvas = this.renderer.canvas;
+        // Eventos Mouse (Desktop)
         canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         canvas.addEventListener('mouseup', () => this.detenerArrastre());
         canvas.addEventListener('mouseleave', () => this.detenerArrastre());
+
+        // Eventos Touch (Móvil)
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // IMPORTANTE: Evita scroll y comportamientos extraños al tocar el canvas
+            this.handleMouseDown(e);
+        }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Importante: Evita que la pantalla se mueva mientras arrastras un elemento
+            this.handleMouseMove(e);
+        }, { passive: false });
+        canvas.addEventListener('touchend', () => this.detenerArrastre());
+    }
+
+    getElementAtPosition(x, y) {
+        // 1. Revisar Textos (BoundingBoxes del Renderer)
+        for (const key in this.renderer.boundingBoxes) {
+            const box = this.renderer.boundingBoxes[key];
+            if (x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h) return key;
+        }
+        // 2. Revisar Imágenes (En orden inverso para seleccionar la de más arriba)
+        for (let i = this.state.imagenesEnCanvas.length - 1; i >= 0; i--) {
+            const img = this.state.imagenesEnCanvas[i];
+            const w = img.wFinal || (img.wBase * img.scale);
+            const h = img.hFinal || (img.hBase * img.scale);
+            if (x >= img.x && x <= img.x + w && y >= img.y && y <= img.y + h) return i;
+        }
+        return null;
     }
 
     handleMouseDown(e) {
-        // Lógica de detección de clic (igual que ui-manager)
-        // ...
-        // Si selecciona imagen:
-        // this.seleccionarImagen(index);
-        // Si selecciona texto:
-        // this.state.selectedTextKey = key;
-        // this.toolbox.resaltarControl('nombre');
+        // Detectar si es touch o mouse
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const rect = this.renderer.canvas.getBoundingClientRect();
+        const scaleX = this.renderer.canvas.width / rect.width;
+        const scaleY = this.renderer.canvas.height / rect.height;
+        const mouseX = (clientX - rect.left) * scaleX;
+        const mouseY = (clientY - rect.top) * scaleY;
+
+        // 1. Verificar si estamos redimensionando (Handles de la caja de selección)
+        if (this.renderer.selectionBox) {
+            const sb = this.renderer.selectionBox;
+            const handleSize = 15;
+            const corners = [{x: sb.x, y: sb.y}, {x: sb.x + sb.w, y: sb.y}, {x: sb.x, y: sb.y + sb.h}, {x: sb.x + sb.w, y: sb.y + sb.h}];
+            
+            for (const c of corners) {
+                if (mouseX >= c.x - handleSize/2 && mouseX <= c.x + handleSize/2 && mouseY >= c.y - handleSize/2 && mouseY <= c.y + handleSize/2) {
+                    this.isResizing = true;
+                    const centerX = sb.x + sb.w / 2;
+                    const centerY = sb.y + sb.h / 2;
+                    this.initialResizeDist = Math.hypot(mouseX - centerX, mouseY - centerY);
+                    
+                    if (sb.type === 'image') {
+                        this.initialScale = this.state.imagenesEnCanvas[sb.index].scale;
+                    } else {
+                        const offset = this.state.offsets[sb.key];
+                        this.initialScale = (offset && offset.scale) ? offset.scale : 1.0;
+                    }
+                    return;
+                }
+            }
+        }
+
+        // 2. Verificar clic en elementos
+        const element = this.getElementAtPosition(mouseX, mouseY);
+        
+        if (element !== null) {
+            this.isDragging = true;
+            this.draggingElement = element;
+            this.startX = mouseX;
+            this.startY = mouseY;
+            this.renderer.canvas.style.cursor = 'grabbing';
+
+            if (typeof element === 'number') {
+                this.seleccionarImagen(element);
+                this.state.selectedTextKey = null;
+            } else if (typeof element === 'string') {
+                this.state.selectedTextKey = element;
+                this.seleccionarImagen(-1);
+                
+                // Actualizar UI del texto seleccionado
+                const type = element.split('_')[0];
+                const currentScale = (this.state.offsets[element] && this.state.offsets[element].scale) ? this.state.offsets[element].scale : 1.0;
+                
+                if (type === 'nombre' || type === 'apellido') {
+                    if(this.toolbox.elements.tamanoNombre) this.toolbox.elements.tamanoNombre.value = currentScale;
+                    if(this.toolbox.elements.valorTamanoNombre) this.toolbox.elements.valorTamanoNombre.textContent = currentScale.toFixed(1);
+                    this.toolbox.resaltarControl('nombre');
+                } else if (type === 'grado') {
+                    if(this.toolbox.elements.tamanoGrado) this.toolbox.elements.tamanoGrado.value = currentScale;
+                    if(this.toolbox.elements.valorTamanoGrado) this.toolbox.elements.valorTamanoGrado.textContent = currentScale.toFixed(1);
+                    this.toolbox.resaltarControl('grado');
+                }
+            }
+            this.updatePreview();
+        } else {
+            // 3. Arrastrar Fondo (si es imagen)
+            if (this.toolbox.elements.tipoFondo.value === 'imagen' && this.state.imagenFondoPropia) {
+                this.isDragging = true;
+                this.draggingElement = 'fondo';
+                this.startX = mouseX;
+                this.startY = mouseY;
+                this.renderer.canvas.style.cursor = 'grabbing';
+            }
+            
+            this.seleccionarImagen(-1);
+            this.state.selectedTextKey = null;
+            this.toolbox.resaltarControl(null); // Limpiar resaltado visual
+            this.updatePreview();
+        }
     }
 
     handleMouseMove(e) {
-        // Lógica de arrastre
-        // ...
-        // this.updatePreview();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const rect = this.renderer.canvas.getBoundingClientRect();
+        const scaleX = this.renderer.canvas.width / rect.width;
+        const scaleY = this.renderer.canvas.height / rect.height;
+        const mouseX = (clientX - rect.left) * scaleX;
+        const mouseY = (clientY - rect.top) * scaleY;
+
+        if (this.isResizing && this.renderer.selectionBox) {
+            const sb = this.renderer.selectionBox;
+            const centerX = sb.x + sb.w / 2;
+            const centerY = sb.y + sb.h / 2;
+            const currentDist = Math.hypot(mouseX - centerX, mouseY - centerY);
+            
+            if (this.initialResizeDist < 1) return;
+            const newScale = Math.max(0.1, this.initialScale * (currentDist / this.initialResizeDist));
+            
+            if (sb.type === 'image') {
+                this.state.imagenesEnCanvas[sb.index].scale = newScale;
+                if(this.toolbox.elements.escalaPersonaje) this.toolbox.elements.escalaPersonaje.value = newScale;
+            } else {
+                if (!this.state.offsets[sb.key]) this.state.offsets[sb.key] = { x: 0, y: 0, scale: 1.0 };
+                this.state.offsets[sb.key].scale = newScale;
+                // Nota: Actualizar sliders de texto aquí sería ideal pero opcional para fluidez
+            }
+            this.updatePreview();
+            return;
+        }
+
+        if (!this.isDragging) return;
+
+        const dx = mouseX - this.startX;
+        const dy = mouseY - this.startY;
+
+        if (this.draggingElement === 'fondo') {
+            this.state.fondoProps.x += dx;
+            this.state.fondoProps.y += dy;
+        } else if (typeof this.draggingElement === 'string') {
+            if (!this.state.offsets[this.draggingElement]) this.state.offsets[this.draggingElement] = { x: 0, y: 0, scale: 1.0 };
+            this.state.offsets[this.draggingElement].x += dx;
+            this.state.offsets[this.draggingElement].y += dy;
+        } else if (typeof this.draggingElement === 'number') {
+            this.state.imagenesEnCanvas[this.draggingElement].x += dx;
+            this.state.imagenesEnCanvas[this.draggingElement].y += dy;
+        }
+
+        this.startX = mouseX;
+        this.startY = mouseY;
+        this.updatePreview();
     }
 
     detenerArrastre() {
