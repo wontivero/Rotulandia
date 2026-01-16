@@ -21,7 +21,7 @@ h1, h2 {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    flex: 0 0 420px; /* Ancho fijo y más compacto para los controles */
+    flex: 0 0 320px; /* Panel lateral más angosto */
     min-width: 300px;
 }
 
@@ -29,8 +29,39 @@ h1, h2 {
     position: sticky; /* ¡Magia! */
     top: 20px; /* Se queda pegado a 20px del borde superior */
     flex: 1; /* Ahora el diseño ocupa todo el espacio disponible */
-    max-height: calc(100vh - 40px); /* Se adapta al alto de la pantalla */
-    overflow-y: auto; /* Permite scroll interno si es necesario */
+    height: calc(100vh - 260px); /* Ajustado: 100vh - (Navbar + Toolbar + Padding) para evitar scroll */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* El scroll lo maneja el viewport */
+}
+
+/* --- NUEVA BARRA DE HERRAMIENTAS --- */
+.editor-toolbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    z-index: 1000;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+/* Estilo de pestañas modernas */
+.nav-pills .nav-link {
+    color: #555;
+    font-weight: 600;
+}
+.nav-pills .nav-link.active {
+    background-color: #3498db;
+    color: white;
+    box-shadow: 0 2px 5px rgba(52, 152, 219, 0.4);
+}
+
+.tool-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 2px;
+    font-weight: bold;
 }
 
 /* Contenedor para alinear input color con iconos de extensiones */
@@ -46,13 +77,40 @@ h1, h2 {
     margin-bottom: 0;
 }
 
-#canvas-rotulo {
-    border: 1px dashed #ccc;
-    border-radius: 8px; /* Para que coincida con el borde redondeado */
-    background-color: #fff;
-    cursor: grab; /* Manito para indicar que se puede mover */
-    max-width: 100%; /* Para que no se salga del contenedor */
-    height: auto; /* Mantiene la proporción */
+/* --- VIEWPORT DEL CANVAS (Área de trabajo) --- */
+.canvas-viewport {
+    background-color: #e9ecef; /* Gris neutro de fondo */
+    background-image: radial-gradient(#dee2e6 1px, transparent 1px); /* Patrón de puntos sutil */
+    background-size: 20px 20px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    flex: 1; /* Ocupar el espacio restante automáticamente */
+    height: auto;
+    min-height: 0; /* Importante para que el scroll funcione dentro de flex */
+    overflow: auto; /* Scroll interno si el zoom es grande */
+    display: flex;
+    position: relative;
+    padding: 20px;
+}
+
+/* Controles de Zoom Flotantes */
+.zoom-controls-floating {
+    position: absolute;
+    bottom: 50px; /* Subimos un poco para no tapar el texto de ayuda */
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.canvas-shadow {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    background-color: white;
+    cursor: grab;
+    transition: width 0.2s ease, height 0.2s ease; /* Suavizar el zoom */
+    margin: auto; /* EL FIX: Centrado automático que respeta el scroll */
+    /* Eliminamos max-width: 100% para permitir zoom in real */
 }
 
 /* Spinner de carga para fuentes */
@@ -209,7 +267,7 @@ h1, h2 {
 
 /* Estilo para los sliders (range) para que se vean mejor */
 input[type=range] {
-    height: 25px;
+    height: 35px; /* Más alto para mejor área de toque */
     -webkit-appearance: none;
     margin: 10px 0;
     width: 100%;
@@ -225,24 +283,24 @@ input[type=range]:focus {
 /* Estilo del riel (Track) */
 input[type=range]::-webkit-slider-runnable-track {
     width: 100%;
-    height: 8px;
+    height: 12px; /* Riel más grueso */
     cursor: pointer;
     background: #dee2e6; /* Gris visible */
-    border-radius: 4px;
+    border-radius: 6px;
     border: 1px solid #ced4da;
 }
 
 /* Estilo del botón (Thumb) */
 input[type=range]::-webkit-slider-thumb {
-    height: 20px;
-    width: 20px;
+    height: 24px; /* Botón más grande */
+    width: 24px;
     border-radius: 50%;
     background: #3498db; /* Azul Rotulandia */
     cursor: pointer;
     -webkit-appearance: none;
-    margin-top: -7px; /* Centrar verticalmente */
+    margin-top: -7px; /* Centrar verticalmente (24/2 - 12/2 - border) */
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    border: 2px solid #fff;
+    border: 3px solid #fff; /* Borde blanco más visible */
 }
 
 /* Compatibilidad Firefox */
@@ -314,6 +372,12 @@ footer {
     .resultado {
         position: static;
         width: 100%;
+        flex: none;
+        height: auto;
+        overflow: visible;
+    }
+    .canvas-viewport {
+        height: 400px; /* Altura fija en móvil */
         flex: none;
     }
 }

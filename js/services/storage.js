@@ -1,5 +1,5 @@
 import { db, auth, storage } from "../firebase-config.js";
-import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { Toast } from '../components/Toast.js';
 import { Modal } from '../components/Modal.js';
@@ -17,6 +17,9 @@ export class StorageManager {
 
     // Método llamado por EditorView
     initEditorEvents() {
+        // Inicializar elementos del modal QR (ahora presentes en EditorView)
+        this.initQRModalElements();
+
         // Escuchar evento custom para editar QR desde el panel rápido (desacople)
         document.addEventListener('editar-qr', (e) => {
             this.abrirModalQR(e.detail);
@@ -38,13 +41,7 @@ export class StorageManager {
         this.listaDisenos = document.getElementById('lista-disenos');
         this.contenedorMisDisenos = document.getElementById('mis-disenos-container');
         
-        this.modalElement = document.getElementById('modalEditarQR');
-        if (this.modalElement) {
-            this.modal = new bootstrap.Modal(this.modalElement);
-            this.btnModalGuardar = document.getElementById('btn-modal-guardar');
-            this.btnModalEliminar = document.getElementById('btn-modal-eliminar');
-            this.btnModalToggle = document.getElementById('btn-modal-toggle');
-        }
+        this.initQRModalElements();
 
         // Cargar datos si hay usuario
         const user = auth.currentUser;
@@ -54,6 +51,16 @@ export class StorageManager {
         } else if (this.contenedorMisDisenos) {
             this.contenedorMisDisenos.classList.add('d-none');
             if (this.listaDisenos) this.listaDisenos.innerHTML = '';
+        }
+    }
+
+    initQRModalElements() {
+        this.modalElement = document.getElementById('modalEditarQR');
+        if (this.modalElement) {
+            this.modal = bootstrap.Modal.getOrCreateInstance(this.modalElement);
+            this.btnModalGuardar = document.getElementById('btn-modal-guardar');
+            this.btnModalEliminar = document.getElementById('btn-modal-eliminar');
+            this.btnModalToggle = document.getElementById('btn-modal-toggle');
         }
     }
 
@@ -145,7 +152,11 @@ export class StorageManager {
                     scale: img.scale,
                     effect: img.effect,
                     wBase: img.wBase,
-                    hBase: img.hBase
+                    hBase: img.hBase,
+                    type: img.type,
+                    shapeType: img.shapeType,
+                    opacity: img.opacity,
+                    color: img.color
                 };
             }));
             disenoData.config.imagenes = imagenesProcesadas;
@@ -159,6 +170,13 @@ export class StorageManager {
                     src = await this.subirImagenBase64(src, path);
                 }
                 bgSrc = src;
+                
+                // Guardar referencia del fondo en colección 'mis_fondos' para reutilizar
+                // Solo si es una imagen nueva (base64) o si queremos asegurar que esté en la lista
+                // Para simplificar, guardamos la URL final
+                if (bgSrc) {
+                    await this.guardarFondoUsuario(user.uid, bgSrc);
+                }
             }
             disenoData.config.bgImageSrc = bgSrc;
 
@@ -186,6 +204,85 @@ export class StorageManager {
             this.btnGuardarNuevo.disabled = false;
             this.btnGuardar.textContent = "💾 Guardar Diseño";
         }
+    }
+
+    async guardarFondoUsuario(uid, url) {
+        try {
+            // Verificar si ya existe para no duplicar
+            const q = query(collection(db, "mis_fondos"), where("uid", "==", uid), where("url", "==", url));
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) return;
+
+            await addDoc(collection(db, "mis_fondos"), {
+                uid: uid,
+                url: url,
+                createdAt: serverTimestamp()
+            });
+        } catch (e) {
+            console.error("Error guardando fondo usuario:", e);
+        }
+    }
+
+    async cargarMisFondos(uid) {
+        try {
+            const q = query(collection(db, "mis_fondos"), where("uid", "==", uid), orderBy("createdAt", "desc"), limit(20));
+            const querySnapshot = await getDocs(q);
+            
+            // Limpiar galería de usuario en toolbox antes de agregar (si fuera necesario, pero addToGallery agrega)
+            this.controller.toolbox.clearUserGallery();
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                this.controller.toolbox.addToGallery(data.url, false);
+            });
+        } catch (error) {
+            console.error("Error cargando mis fondos:", error);
+        }
+    }
+
+    async cargarMisFormas(uid) {
+        try {
+            const q = query(collection(db, "mis_formas"), where("uid", "==", uid), orderBy("createdAt", "desc"), limit(20));
+            const querySnapshot = await getDocs(q);
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                this.controller.toolbox.addToGallery(data.url, 'forma', false);
+            });
+        } catch (error) {
+            console.error("Error cargando mis formas:", error);
+        }
+    }
+
+    async subirArchivoInmediato(file, category) {
+        // category: 'fondo', 'personaje', 'forma'
+        const user = auth.currentUser;
+        if (!user) return null;
+
+        let folder = 'fondos';
+        if (category === 'personaje' || category === 'forma') folder = 'imagenes';
+        
+        const path = `usuarios/${user.uid}/${folder}/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, path);
+        
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+
+        // Si es fondo, lo guardamos en la colección para que aparezca en "Mis Fondos"
+        if (category === 'fondo') {
+            await addDoc(collection(db, "mis_fondos"), {
+                uid: user.uid,
+                url: url,
+                createdAt: serverTimestamp()
+            });
+        } else if (category === 'forma') {
+            await addDoc(collection(db, "mis_formas"), {
+                uid: user.uid,
+                url: url,
+                createdAt: serverTimestamp()
+            });
+        }
+        return url;
     }
 
     async subirImagenBase64(base64String, path) {

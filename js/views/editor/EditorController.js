@@ -1,6 +1,7 @@
 import { PERSONAJES, FONDOS, PLANTILLAS } from '../../config.js';
 import { db, auth } from '../../firebase-config.js';
 import { collection, addDoc, setDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { Toast } from '../../components/Toast.js';
 import { Modal } from '../../components/Modal.js';
 import { Toolbox } from './Toolbox.js';
@@ -20,6 +21,7 @@ export default class EditorController {
         };
 
         // Variables de interacción (Mouse)
+        this.isUpdatingUI = false; // Bandera para evitar bucles de actualización
         this.isDragging = false;
         this.isResizing = false;
         this.draggingElement = null;
@@ -27,34 +29,115 @@ export default class EditorController {
         this.startY = 0;
         this.initialResizeDist = 0;
         this.initialScale = 1.0;
+        this.zoomLevel = 1.0; // 1.0 = 100% del tamaño visual base
 
         // Inicializar Toolbox con callbacks
         this.toolbox = new Toolbox({
-            onUpdate: () => this.updatePreview(),
+            onUpdate: () => { this.persistTextStyles(); this.updatePreview(); },
             onRandomGradient: () => this.generarColorRandom(),
             onDownloadPDF: () => this.descargarPDF(),
             onDownloadPNG: () => this.descargarPNG(),
             onGenerateQR: () => this.generarQR(),
             onImagePropChange: (prop, val) => this.updateImageProp(prop, val),
             onDeleteImage: () => this.eliminarImagenSeleccionada(),
-            onTextScaleChange: (type, val) => this.updateTextScale(type, val),
+            onTextScaleChange: (type, val) => this.updateTextScale(this.state.selectedTextKey ? this.state.selectedTextKey.split('_')[0] : 'nombre', val),
             onPlantillaChange: (val) => this.cambiarPlantilla(val),
             onAddImageToCanvas: (img) => this.agregarImagenAlCanvas(img),
             onSetBackground: (img) => this.setFondoImagen(img),
-            onNewDesign: () => this.crearNuevoDiseno()
+            onAddShape: (type) => this.agregarForma(type),
+            onShapePropChange: (prop, val) => this.updateImageProp(prop, val), // Reutilizamos updateImageProp ya que modifica el array imagenesEnCanvas
+            onNewDesign: () => this.crearNuevoDiseno(),
+            onUploadFile: (file, category) => this.procesarSubidaArchivo(file, category)
         });
 
         this.initCanvasEvents();
+        this.initZoomControls();
         this.loadInitialData();
+    }
+
+    async procesarSubidaArchivo(file, category) {
+        // Si hay usuario y StorageManager, subimos a la nube para persistencia inmediata
+        if (this.storageManager && auth.currentUser) {
+            Toast.show('Subiendo...', 'Guardando en tu galería...', 'info');
+            try {
+                const url = await this.storageManager.subirArchivoInmediato(file, category);
+                if (url) {
+                    this.toolbox.addToGallery(url, category, true); // true = autoAssign
+                }
+            } catch (error) {
+                console.error("Error subida inmediata:", error);
+                Toast.show('Error', 'No se pudo subir la imagen.', 'error');
+            }
+        } else {
+            // Modo invitado: Carga local (FileReader)
+            const reader = new FileReader();
+            reader.onload = (e) => this.toolbox.addToGallery(e.target.result, category, true);
+            reader.readAsDataURL(file);
+        }
+    }
+
+    persistTextStyles() {
+        if (this.isUpdatingUI) return; // Si estamos actualizando la UI, no guardamos nada para evitar sobrescribir datos
+        if (this.state.selectedTextKey) {
+            const rawValues = this.toolbox.getValues();
+            const type = this.state.selectedTextKey.split('_')[0];
+            const suffix = (type === 'grado') ? 'Grado' : 'Nombre';
+            
+            this.state[`fuente${suffix}`] = rawValues.fuenteTexto;
+            this.state[`color${suffix}`] = rawValues.colorTexto;
+            this.state[`efectoTexto${suffix}`] = rawValues.efectoTexto;
+            this.state[`intensidadEfecto${suffix}`] = rawValues.intensidadEfectoTexto;
+            this.state[`checkArcoiris${suffix}`] = rawValues.checkArcoirisTexto;
+            this.state[`shiftArcoiris${suffix}`] = rawValues.shiftArcoirisTexto;
+            this.state[`checkMetal${suffix}`] = rawValues.checkMetalTexto;
+            this.state[`tipoMetal${suffix}`] = rawValues.tipoMetalTexto;
+        }
     }
 
     setStorageManager(sm) {
         this.storageManager = sm;
+        
+        // FIX: Cargar fondos del usuario cuando el StorageManager esté listo y Firebase confirme el usuario
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                this.storageManager.cargarMisFondos(user.uid);
+                this.storageManager.cargarMisFormas(user.uid);
+                this.storageManager.cargarMisQRs(user.uid);
+            }
+        });
     }
 
     getState() {
         // Combina el estado de los controles (Toolbox) con el estado interno (Canvas)
-        return { ...this.toolbox.getValues(), ...this.state };
+        const rawValues = this.toolbox.getValues();
+        
+        // FIX CRÍTICO: this.state va PRIMERO, rawValues (Inputs UI) va DESPUÉS.
+        // Esto asegura que lo que el usuario escribe en los inputs (nombre, apellido) tenga prioridad sobre el estado interno vacío.
+        const state = { ...this.state, ...rawValues };
+        
+        // Aplicar valores del panel de texto al elemento seleccionado
+        if (this.state.selectedTextKey) {
+            const type = this.state.selectedTextKey.split('_')[0]; // 'nombre', 'apellido', 'grado'
+            const suffix = (type === 'grado') ? 'Grado' : 'Nombre'; // Nombre y Apellido comparten estilo
+            
+            // Mapear inputs genéricos a props específicas
+            state[`fuente${suffix}`] = rawValues.fuenteTexto;
+            state[`color${suffix}`] = rawValues.colorTexto;
+            state[`efectoTexto${suffix}`] = rawValues.efectoTexto;
+            state[`intensidadEfecto${suffix}`] = rawValues.intensidadEfectoTexto;
+            state[`checkArcoiris${suffix}`] = rawValues.checkArcoirisTexto;
+            state[`shiftArcoiris${suffix}`] = rawValues.shiftArcoirisTexto;
+            state[`checkMetal${suffix}`] = rawValues.checkMetalTexto;
+            state[`tipoMetal${suffix}`] = rawValues.tipoMetalTexto;
+            
+            // El tamaño se maneja via offsets, pero guardamos el valor base por si acaso
+            state[`tamano${suffix}`] = rawValues.tamanoTextoInput;
+            
+            // Actualizar offsets de escala en tiempo real
+            // this.updateTextScale(type, rawValues.tamanoTextoInput); // ELIMINADO: Causaba recursión infinita
+        }
+        
+        return state;
     }
 
     async updatePreview() {
@@ -64,9 +147,12 @@ export default class EditorController {
     }
 
     loadInitialData() {
-        PERSONAJES.forEach(f => this.toolbox.addToGallery(`personajes/${f}`, true));
-        FONDOS.forEach(f => this.toolbox.addToGallery(`fondos/${f}`, false));
+        PERSONAJES.forEach(f => this.toolbox.addPrecargadoToGallery(`personajes/${f}`, 'personaje'));
+        FONDOS.forEach(f => this.toolbox.addPrecargadoToGallery(`fondos/${f}`, 'fondo'));
         document.fonts.ready.then(() => this.updatePreview());
+        this.toolbox.resetTextPanel(); // Mostrar mensaje inicial de "Selecciona texto"
+        // Ajustar zoom inicial después de un momento para asegurar que el DOM esté listo
+        setTimeout(() => this.aplicarZoom('fit'), 100);
     }
 
     // Método delegado para que StorageManager pueda actualizar la UI
@@ -140,6 +226,10 @@ export default class EditorController {
         const plantilla = PLANTILLAS[this.toolbox.elements.plantilla.value];
         const layout = (typeof plantilla.layout === 'function') ? plantilla.layout(this.renderer.canvas.width, this.renderer.canvas.height) : plantilla.layout;
         
+        // Si la imagen viene de la galería de formas, aplicamos opacidad por defecto
+        // Detectamos si es forma por el alt del elemento img si es posible, o simplemente aplicamos defaults generales
+        const isShape = img.alt === 'forma';
+        
         this.state.imagenesEnCanvas.push({
             img: img,
             x: layout.personaje.x + (Math.random() * 20),
@@ -148,7 +238,34 @@ export default class EditorController {
             hBase: layout.personaje.h,
             scale: 1.0,
             effect: 'ninguno',
-            effectIntensity: 5
+            effectIntensity: 5,
+            opacity: isShape ? 0.5 : 1, // Opacidad inicial para formas subidas
+            type: isShape ? 'shape' : 'image', // FIX: Identificar como forma para la UI
+            shapeType: isShape ? 'uploaded' : undefined // FIX: Subtipo para el renderer
+        });
+        this.seleccionarImagen(this.state.imagenesEnCanvas.length - 1);
+        this.updatePreview();
+    }
+
+    agregarForma(tipo) {
+        const plantilla = PLANTILLAS[this.toolbox.elements.plantilla.value];
+        const layout = (typeof plantilla.layout === 'function') ? plantilla.layout(this.renderer.canvas.width, this.renderer.canvas.height) : plantilla.layout;
+        
+        // Dimensiones base según el tipo
+        let w = 100, h = 50;
+        if (tipo === 'square' || tipo === 'circle') { w = 80; h = 80; }
+        if (tipo === 'pill') { w = 120; h = 40; }
+
+        this.state.imagenesEnCanvas.push({
+            type: 'shape',
+            shapeType: tipo,
+            x: layout.personaje.x + (Math.random() * 20),
+            y: layout.personaje.y + (Math.random() * 20),
+            wBase: w,
+            hBase: h,
+            scale: 1.0,
+            color: '#ffffff',
+            opacity: 0.15
         });
         this.seleccionarImagen(this.state.imagenesEnCanvas.length - 1);
         this.updatePreview();
@@ -162,8 +279,13 @@ export default class EditorController {
 
     seleccionarImagen(index) {
         this.state.indiceImagenSeleccionada = index;
-        this.toolbox.updatePanelImagen(index, this.state.imagenesEnCanvas[index]);
-        if (index >= 0) this.toolbox.resaltarControl('imagen');
+        const item = this.state.imagenesEnCanvas[index];
+        
+        if (item && item.type === 'shape') {
+            this.toolbox.updatePanelForma(index, item);
+        } else {
+            this.toolbox.updatePanelImagen(index, item);
+        }
     }
 
     updateImageProp(prop, val) {
@@ -193,7 +315,9 @@ export default class EditorController {
            if (this.toolbox.elements.grupoBorde2) this.toolbox.elements.grupoBorde2.style.display = 'none';
            this.toolbox.elements.labelConBorde.textContent = 'Redondear Bordes';
         }
-        this.updatePreview();
+        this.updatePreview().then(() => {
+            this.aplicarZoom('fit');
+        });
     }
 
     updateTextScale(type, value) {
@@ -285,10 +409,70 @@ export default class EditorController {
             efectoTextoNombre: 'moderno', efectoTextoGrado: 'moderno',
             efectoBorde: 'ninguno'
         };
+        
+        // Guardar defaults en el estado interno también
+        Object.assign(this.state, defaults);
         this.toolbox.setValues(defaults);
 
         // 4. Actualizar vista
         this.updatePreview();
+    }
+
+    // --- ZOOM CONTROLS ---
+    initZoomControls() {
+        const btnIn = document.getElementById('btn-zoom-in');
+        const btnOut = document.getElementById('btn-zoom-out');
+        const btnFit = document.getElementById('btn-zoom-fit');
+        
+        if (btnIn) btnIn.addEventListener('click', () => this.aplicarZoom('in'));
+        if (btnOut) btnOut.addEventListener('click', () => this.aplicarZoom('out'));
+        if (btnFit) btnFit.addEventListener('click', () => this.aplicarZoom('fit'));
+    }
+
+    aplicarZoom(action) {
+        const canvas = this.renderer.canvas;
+        const container = document.getElementById('contenedor-canvas');
+        const indicator = document.getElementById('zoom-level-indicator');
+        
+        if (!canvas || !container) return;
+
+        // Calcular el factor de ajuste para que quepa en el contenedor (Fit)
+        // Usamos un margen de seguridad (padding)
+        const padding = 40;
+        const availableWidth = container.clientWidth - padding;
+        const availableHeight = container.clientHeight - padding;
+        
+        // Relación de aspecto del canvas real
+        const canvasRatio = canvas.width / canvas.height;
+        const containerRatio = availableWidth / availableHeight;
+
+        let fitWidth;
+        if (canvasRatio > containerRatio) {
+            fitWidth = availableWidth;
+        } else {
+            fitWidth = availableHeight * canvasRatio;
+        }
+
+        if (action === 'fit') {
+            this.zoomLevel = 1.0; // Reiniciamos nivel relativo
+            canvas.style.width = `${fitWidth}px`;
+            canvas.style.height = `${fitWidth / canvasRatio}px`;
+        } else {
+            const currentWidth = parseFloat(canvas.style.width) || fitWidth;
+            const factor = action === 'in' ? 1.2 : 0.8;
+            const newWidth = currentWidth * factor;
+            
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newWidth / canvasRatio}px`;
+            
+            // Actualizar nivel relativo para mostrar al usuario (aprox)
+            // Comparamos el ancho actual con el ancho "Fit" para dar un porcentaje relativo a la pantalla
+            this.zoomLevel = newWidth / fitWidth;
+        }
+
+        if (indicator) {
+            indicator.textContent = `${Math.round(this.zoomLevel * 100)}%`;
+        }
     }
 
     // --- CANVAS EVENTS ---
@@ -310,6 +494,22 @@ export default class EditorController {
             this.handleMouseMove(e);
         }, { passive: false });
         canvas.addEventListener('touchend', () => this.detenerArrastre());
+
+        // Evento Teclado (Delete) para eliminar elementos
+        document.addEventListener('keydown', (e) => {
+            // Verificar si el canvas sigue en el DOM para evitar acciones de controladores viejos
+            if (!document.body.contains(canvas)) return;
+
+            if (e.key === 'Delete') {
+                // Evitar borrar si se está escribiendo en un input
+                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                
+                if (this.state.indiceImagenSeleccionada >= 0) {
+                    this.eliminarImagenSeleccionada();
+                }
+                // Nota: Para texto fijo (Nombre/Grado) no lo eliminamos para no romper la plantilla, solo imágenes/formas.
+            }
+        });
     }
 
     getElementAtPosition(x, y) {
@@ -345,15 +545,28 @@ export default class EditorController {
             const handleSize = 15;
             const corners = [{x: sb.x, y: sb.y}, {x: sb.x + sb.w, y: sb.y}, {x: sb.x, y: sb.y + sb.h}, {x: sb.x + sb.w, y: sb.y + sb.h}];
             
-            for (const c of corners) {
+            for (let i = 0; i < corners.length; i++) {
+                const c = corners[i];
                 if (mouseX >= c.x - handleSize/2 && mouseX <= c.x + handleSize/2 && mouseY >= c.y - handleSize/2 && mouseY <= c.y + handleSize/2) {
                     this.isResizing = true;
+                    this.resizeHandle = i; // 0:TL, 1:TR, 2:BL, 3:BR
                     const centerX = sb.x + sb.w / 2;
                     const centerY = sb.y + sb.h / 2;
                     this.initialResizeDist = Math.hypot(mouseX - centerX, mouseY - centerY);
                     
                     if (sb.type === 'image') {
-                        this.initialScale = this.state.imagenesEnCanvas[sb.index].scale;
+                        const img = this.state.imagenesEnCanvas[sb.index];
+                        this.initialScale = img.scale;
+                        // Guardar estado inicial para redimensionamiento libre (Formas)
+                        this.resizeStartProps = {
+                            x: img.x,
+                            y: img.y,
+                            w: img.wFinal,
+                            h: img.hFinal,
+                            wBase: img.wBase,
+                            hBase: img.hBase,
+                            scale: img.scale
+                        };
                     } else {
                         const offset = this.state.offsets[sb.key];
                         this.initialScale = (offset && offset.scale) ? offset.scale : 1.0;
@@ -368,6 +581,10 @@ export default class EditorController {
         
         if (element !== null) {
             this.isDragging = true;
+            
+            // Guardar cambios del elemento anterior antes de cambiar la selección
+            this.persistTextStyles();
+            
             this.draggingElement = element;
             this.startX = mouseX;
             this.startY = mouseY;
@@ -375,24 +592,38 @@ export default class EditorController {
 
             if (typeof element === 'number') {
                 this.seleccionarImagen(element);
+                this.toolbox.resetTextPanel(); // Deseleccionar texto visualmente
                 this.state.selectedTextKey = null;
             } else if (typeof element === 'string') {
                 this.state.selectedTextKey = element;
                 this.seleccionarImagen(-1);
                 
-                // Actualizar UI del texto seleccionado
+                // Actualizar Panel de Texto Unificado
                 const type = element.split('_')[0];
+                const suffix = (type === 'grado') ? 'Grado' : 'Nombre';
+                const currentConfig = this.state; // FIX: Leer directo del estado interno para no contaminar con la toolbar vieja
                 const currentScale = (this.state.offsets[element] && this.state.offsets[element].scale) ? this.state.offsets[element].scale : 1.0;
                 
-                if (type === 'nombre' || type === 'apellido') {
-                    if(this.toolbox.elements.tamanoNombre) this.toolbox.elements.tamanoNombre.value = currentScale;
-                    if(this.toolbox.elements.valorTamanoNombre) this.toolbox.elements.valorTamanoNombre.textContent = currentScale.toFixed(1);
-                    this.toolbox.resaltarControl('nombre');
-                } else if (type === 'grado') {
-                    if(this.toolbox.elements.tamanoGrado) this.toolbox.elements.tamanoGrado.value = currentScale;
-                    if(this.toolbox.elements.valorTamanoGrado) this.toolbox.elements.valorTamanoGrado.textContent = currentScale.toFixed(1);
-                    this.toolbox.resaltarControl('grado');
-                }
+                // Preparar config para el panel
+                const panelConfig = {
+                    fuente: currentConfig[`fuente${suffix}`],
+                    color: currentConfig[`color${suffix}`],
+                    tamano: currentScale,
+                    efecto: currentConfig[`efectoTexto${suffix}`],
+                    intensidad: currentConfig[`intensidadEfecto${suffix}`],
+                    arcoiris: currentConfig[`checkArcoiris${suffix}`],
+                    shiftArcoiris: currentConfig[`shiftArcoiris${suffix}`],
+                    metal: currentConfig[`checkMetal${suffix}`],
+                    tipoMetal: currentConfig[`tipoMetal${suffix}`]
+                };
+
+                const label = type.charAt(0).toUpperCase() + type.slice(1);
+                
+                this.isUpdatingUI = true; // Bloquear guardado automático
+                this.toolbox.updateTextPanel(panelConfig, label);
+                this.isUpdatingUI = false; // Desbloquear
+                
+                this.toolbox.resaltarControl('texto');
             }
             this.updatePreview();
         } else {
@@ -405,11 +636,78 @@ export default class EditorController {
                 this.renderer.canvas.style.cursor = 'grabbing';
             }
             
+            // Guardar antes de deseleccionar
+            this.persistTextStyles();
+            
             this.seleccionarImagen(-1);
             this.state.selectedTextKey = null;
+            this.toolbox.resetTextPanel(); // Mostrar mensaje de "Selecciona texto"
+            // Ocultar panel de texto si no hay nada seleccionado
+            // La lógica de mostrar 'General' está en Toolbox.resaltarControl(null)
             this.toolbox.resaltarControl(null); // Limpiar resaltado visual
             this.updatePreview();
         }
+    }
+
+    handleTextFocus(id) {
+        // Simular selección cuando se hace foco en el input
+        // Asumimos el índice 0 por defecto para la edición desde input
+        const key = `${id}_0`; 
+        // Forzamos la selección visual
+        this.state.selectedTextKey = key;
+        this.seleccionarImagen(-1);
+        
+        // Reutilizamos la lógica de carga del panel
+        // Necesitamos disparar la actualización del panel, similar a handleMouseDown
+        // Para simplificar, llamamos a updatePreview que leerá el estado, 
+        // pero necesitamos poblar el panel primero.
+        
+        // Mejor estrategia: Simular un click en el elemento correspondiente en el canvas si existe
+        // O llamar manualmente a la lógica de población del panel.
+        
+        const type = id; // 'nombre', 'apellido', 'grado'
+        const suffix = (type === 'grado') ? 'Grado' : 'Nombre';
+        
+        // Recuperar valores "reales" del estado interno o defaults, no del panel genérico que podría estar sucio
+        // Accedemos a this.toolbox.elements para leer los valores "viejos" (específicos) si existieran, pero ya no existen.
+        // Debemos confiar en que el estado se mantiene.
+        
+        // Hack: Para que funcione fluido, al hacer foco, simplemente mostramos el panel con los valores actuales del estado para ese tipo.
+        // Como getState() mezcla cosas, accedemos a this.state o valores por defecto.
+        
+        // Nota: Al refactorizar, los valores específicos (fuenteNombre, etc.) deben persistir en this.state o en inputs ocultos si queremos mantenerlos al cambiar de selección.
+        // En esta implementación simplificada, al cambiar de selección, el panel se actualiza. Al cambiar un valor del panel, updatePreview -> getState -> lee panel -> actualiza state.
+        // PERO: Si cambio de Nombre a Grado, y luego vuelvo a Nombre, ¿dónde se guardó la fuente de Nombre?
+        // RESPUESTA: Se guardó en this.state implícitamente si updatePreview se ejecutó.
+        // PERO getState() lee del panel. Si cambio selección, el panel cambia.
+        // NECESITAMOS PERSISTENCIA EXPLÍCITA.
+        
+        // FIX CRÍTICO: Antes de cambiar la selección (y por tanto los valores del panel), debemos guardar los valores actuales del panel en el estado del objeto anteriormente seleccionado.
+        // Esto se hace automáticamente en updatePreview() si se llama antes de cambiar selectedTextKey.
+        
+        // Por ahora, para el foco:
+        const offsetKey = `${type}_0`;
+        const currentScale = (this.state.offsets[offsetKey] && this.state.offsets[offsetKey].scale) ? this.state.offsets[offsetKey].scale : 1.0;
+
+        const panelConfig = {
+            fuente: this.state[`fuente${suffix}`], // Leer del estado guardado
+            color: this.state[`color${suffix}`],
+            tamano: currentScale,
+            efecto: this.state[`efectoTexto${suffix}`],
+            intensidad: this.state[`intensidadEfecto${suffix}`],
+            arcoiris: this.state[`checkArcoiris${suffix}`],
+            shiftArcoiris: this.state[`shiftArcoiris${suffix}`],
+            metal: this.state[`checkMetal${suffix}`],
+            tipoMetal: this.state[`tipoMetal${suffix}`]
+        };
+
+        const label = type.charAt(0).toUpperCase() + type.slice(1);
+        
+        this.isUpdatingUI = true; // Bloquear guardado automático
+        this.toolbox.updateTextPanel(panelConfig, label);
+        this.isUpdatingUI = false; // Desbloquear
+        
+        this.toolbox.resaltarControl('texto');
     }
 
     handleMouseMove(e) {
@@ -424,6 +722,87 @@ export default class EditorController {
 
         if (this.isResizing && this.renderer.selectionBox) {
             const sb = this.renderer.selectionBox;
+            
+            // Lógica de redimensionamiento libre para Formas
+            if (sb.type === 'image') {
+                const img = this.state.imagenesEnCanvas[sb.index];
+                if (img.type === 'shape') {
+                    const start = this.resizeStartProps;
+                    const handle = this.resizeHandle;
+                    
+                    let newX = start.x;
+                    let newY = start.y;
+                    let newW = start.w;
+                    let newH = start.h;
+
+                    // Calcular nuevas dimensiones según la esquina arrastrada
+                    if (handle === 0) { // TL (Arriba-Izquierda)
+                        const right = start.x + start.w;
+                        const bottom = start.y + start.h;
+                        newX = Math.min(mouseX, right - 10);
+                        newY = Math.min(mouseY, bottom - 10);
+                        newW = right - newX;
+                        newH = bottom - newY;
+
+                        if (e.ctrlKey) {
+                            const ratio = start.w / start.h;
+                            if (newW / newH > ratio) newH = newW / ratio;
+                            else newW = newH * ratio;
+                            newX = right - newW;
+                            newY = bottom - newH;
+                        }
+                    } else if (handle === 1) { // TR (Arriba-Derecha)
+                        const left = start.x;
+                        const bottom = start.y + start.h;
+                        newY = Math.min(mouseY, bottom - 10);
+                        newW = Math.max(10, mouseX - left);
+                        newH = bottom - newY;
+
+                        if (e.ctrlKey) {
+                            const ratio = start.w / start.h;
+                            if (newW / newH > ratio) newH = newW / ratio;
+                            else newW = newH * ratio;
+                            newY = bottom - newH;
+                        }
+                    } else if (handle === 2) { // BL (Abajo-Izquierda)
+                        const right = start.x + start.w;
+                        const top = start.y;
+                        newX = Math.min(mouseX, right - 10);
+                        newW = right - newX;
+                        newH = Math.max(10, mouseY - top);
+
+                        if (e.ctrlKey) {
+                            const ratio = start.w / start.h;
+                            if (newW / newH > ratio) newH = newW / ratio;
+                            else newW = newH * ratio;
+                            newX = right - newW;
+                        }
+                    } else if (handle === 3) { // BR (Abajo-Derecha)
+                        const left = start.x;
+                        const top = start.y;
+                        newW = Math.max(10, mouseX - left);
+                        newH = Math.max(10, mouseY - top);
+
+                        if (e.ctrlKey) {
+                            const ratio = start.w / start.h;
+                            if (newW / newH > ratio) newH = newW / ratio;
+                            else newW = newH * ratio;
+                        }
+                    }
+
+                    // Aplicar cambios
+                    img.x = newX;
+                    img.y = newY;
+                    // Ajustamos wBase/hBase manteniendo la escala actual para no romper la lógica
+                    img.wBase = newW / img.scale;
+                    img.hBase = newH / img.scale;
+                    
+                    this.updatePreview();
+                    return;
+                }
+            }
+
+            // Lógica de redimensionamiento uniforme (Imágenes y Texto)
             const centerX = sb.x + sb.w / 2;
             const centerY = sb.y + sb.h / 2;
             const currentDist = Math.hypot(mouseX - centerX, mouseY - centerY);
@@ -467,6 +846,7 @@ export default class EditorController {
 
     detenerArrastre() {
         this.isDragging = false;
+        this.isResizing = false;
         this.renderer.canvas.style.cursor = 'grab';
     }
 }

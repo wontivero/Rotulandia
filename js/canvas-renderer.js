@@ -274,30 +274,52 @@ export class CanvasRenderer {
                 }
             }
 
-            const intensity = imgData.effectIntensity !== undefined ? imgData.effectIntensity : 5;
+            if (imgData.type === 'shape') {
+                // Renderizado de Formas
+                ctx.globalAlpha = imgData.opacity !== undefined ? imgData.opacity : 1;
+                ctx.fillStyle = imgData.color || '#000000';
+                
+                if (imgData.shapeType === 'uploaded') {
+                    ctx.drawImage(imgData.img, imgData.x, imgData.y, wFinal, hFinal);
+                } else if (imgData.shapeType === 'rectangle' || imgData.shapeType === 'square') {
+                    ctx.fillRect(imgData.x, imgData.y, wFinal, hFinal);
+                } else if (imgData.shapeType === 'circle') {
+                    ctx.beginPath();
+                    ctx.ellipse(imgData.x + wFinal/2, imgData.y + hFinal/2, wFinal/2, hFinal/2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (imgData.shapeType === 'pill') {
+                    ctx.beginPath();
+                    // Radio máximo para que sea píldora perfecta
+                    const r = Math.min(wFinal, hFinal) / 2;
+                    ctx.roundRect(imgData.x, imgData.y, wFinal, hFinal, [r]);
+                    ctx.fill();
+                }
+            } else {
+                // Renderizado de Imágenes
+                const intensity = imgData.effectIntensity !== undefined ? imgData.effectIntensity : 5;
 
-            if (imgData.effect === 'sticker') {
-                const s = Math.max(1, intensity * 0.8);
-                ctx.filter = `drop-shadow(${s}px 0 0 white) drop-shadow(-${s}px 0 0 white) drop-shadow(0 ${s}px 0 white) drop-shadow(0 -${s}px 0 white)`;
-            } else if (imgData.effect === 'sombra_pop') {
-                ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
-                ctx.shadowBlur = 0;
-                ctx.shadowOffsetX = intensity;
-                ctx.shadowOffsetY = intensity;
-            } else if (imgData.effect === 'glow') {
-                ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
-                ctx.shadowBlur = intensity * 3;
-            } else if (imgData.effect === 'holografico') {
-                ctx.filter = `hue-rotate(${intensity * 18}deg)`;
-            } else if (imgData.effect === 'vibrante') {
-                ctx.filter = `saturate(${100 + (intensity * 10)}%)`;
-            } else if (imgData.effect === 'vintage') {
-                ctx.filter = `sepia(${intensity * 5}%)`;
-            } else if (imgData.effect === 'fantasma') {
-                ctx.globalAlpha = Math.max(0.1, 1 - (intensity / 25));
+                if (imgData.effect === 'sticker') {
+                    const s = Math.max(1, intensity * 0.8);
+                    ctx.filter = `drop-shadow(${s}px 0 0 white) drop-shadow(-${s}px 0 0 white) drop-shadow(0 ${s}px 0 white) drop-shadow(0 -${s}px 0 white)`;
+                } else if (imgData.effect === 'sombra_pop') {
+                    ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+                    ctx.shadowBlur = 0;
+                    ctx.shadowOffsetX = intensity;
+                    ctx.shadowOffsetY = intensity;
+                } else if (imgData.effect === 'glow') {
+                    ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
+                    ctx.shadowBlur = intensity * 3;
+                } else if (imgData.effect === 'holografico') {
+                    ctx.filter = `hue-rotate(${intensity * 18}deg)`;
+                } else if (imgData.effect === 'vibrante') {
+                    ctx.filter = `saturate(${100 + (intensity * 10)}%)`;
+                } else if (imgData.effect === 'vintage') {
+                    ctx.filter = `sepia(${intensity * 5}%)`;
+                } else if (imgData.effect === 'fantasma') {
+                    ctx.globalAlpha = Math.max(0.1, 1 - (intensity / 25));
+                }
+                ctx.drawImage(imgData.img, imgData.x, imgData.y, wFinal, hFinal);
             }
-
-            ctx.drawImage(imgData.img, imgData.x, imgData.y, wFinal, hFinal);
             ctx.restore();
 
             if (!exportMode && index === indiceImagenSeleccionada) {
