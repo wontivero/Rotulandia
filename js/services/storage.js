@@ -320,6 +320,8 @@ export class StorageManager {
     }
 
     async cargarMisDisenos(uid) {
+        if (!this.listaDisenos) return;
+
         this.listaDisenos.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
         
         try {
@@ -536,7 +538,7 @@ export class StorageManager {
 
     abrirModalQR(qrData) {
         const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-        const qrUrl = `${baseUrl}qr.html?id=${qrData.id}`;
+        const qrUrl = `${baseUrl}qr.html?${qrData.id}`;
         const qr = new QRious({ value: qrUrl, size: 150, level: 'L' });
 
         document.getElementById('modal-qr-img').src = qr.toDataURL();

@@ -59,7 +59,7 @@
 
     <script type="module">
         import { db } from './js/firebase-config.js';
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const mensajesMotivadores = [
             {
@@ -146,7 +146,13 @@
 
         async function init() {
             const params = new URLSearchParams(window.location.search);
-            const id = params.get('id');
+            let id = params.get('id');
+            
+            // Soporte para formato corto ?ID (sin clave) para QRs más simples
+            if (!id && window.location.search.length > 1) {
+                // Eliminar el '?' inicial
+                id = window.location.search.substring(1);
+            }
 
             if (!id) {
                 showError();
@@ -156,9 +162,9 @@
             try {
                 const docRef = doc(db, "qrs", id);
                 const docSnap = await getDoc(docRef);
+                const data = docSnap.exists() ? docSnap.data() : null;
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
+                if (data) {
                     if (data.activo === false) {
                         showInactive();
                     } else {
@@ -168,7 +174,7 @@
                     showError();
                 }
             } catch (e) {
-                console.error(e);
+                console.error("Error:", e);
                 showError();
             }
         }

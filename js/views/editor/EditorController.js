@@ -38,6 +38,7 @@ export default class EditorController {
             onDownloadPDF: () => this.descargarPDF(),
             onDownloadPNG: () => this.descargarPNG(),
             onGenerateQR: () => this.generarQR(),
+            onAddQRToCanvas: (qrData) => this.agregarQRGuardado(qrData),
             onImagePropChange: (prop, val) => this.updateImageProp(prop, val),
             onDeleteImage: () => this.eliminarImagenSeleccionada(),
             onTextScaleChange: (type, val) => this.updateTextScale(this.state.selectedTextKey ? this.state.selectedTextKey.split('_')[0] : 'nombre', val),
@@ -336,6 +337,16 @@ export default class EditorController {
         this.updatePreview();
     }
 
+    // Función auxiliar para generar ID corto aleatorio
+    generarShortId(length = 6) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
     generarColorRandom() {
         const paletas = [{ c1: '#ff9a9e', c2: '#fecfef' }, { c1: '#84fab0', c2: '#8fd3f4' }]; // ... más paletas
         const random = paletas[Math.floor(Math.random() * paletas.length)];
@@ -343,10 +354,111 @@ export default class EditorController {
     }
 
     async generarQR() {
-        // Lógica de generación de QR (igual que en ui-manager)
-        // ...
-        // Al final llama a:
-        // this.agregarQRAlCanvas(url, color, id);
+        const texto = this.toolbox.elements.textoQr.value;
+        const color = this.toolbox.elements.colorQr.value;
+
+        if (!texto) {
+            Toast.show('Falta información', 'Ingresa un teléfono o texto para el QR.', 'warning');
+            return;
+        }
+
+        let qrValue = texto;
+        let qrId = null;
+
+        // Guardar en Firestore si hay usuario (QR Dinámico)
+        if (auth.currentUser && this.storageManager) {
+            try {
+                // Usar el nombre del diseño actual o un default
+                const nombreDiseno = this.state.nombre || 'Alumno';
+                const apellidoDiseno = this.state.apellido || '';
+
+                // Generar ID corto único
+                let shortId = this.generarShortId();
+                let isUnique = false;
+                let intentos = 0;
+
+                // Verificar unicidad (máximo 5 intentos para evitar bucles infinitos raros)
+                while (!isUnique && intentos < 5) {
+                    const docRefCheck = doc(db, "qrs", shortId);
+                    const docSnap = await getDoc(docRefCheck);
+                    if (!docSnap.exists()) isUnique = true;
+                    else { shortId = this.generarShortId(); intentos++; }
+                }
+
+                // Usamos setDoc para establecer nuestro propio ID (el corto)
+                await setDoc(doc(db, "qrs", shortId), {
+                    uid: auth.currentUser.uid,
+                    telefono: texto,
+                    nombre: nombreDiseno,
+                    apellido: apellidoDiseno,
+                    activo: true,
+                    createdAt: serverTimestamp()
+                });
+                qrId = shortId; // El ID del documento ES el shortId
+                
+                // Construir URL absoluta para el QR Dinámico
+                // Detectamos la URL base actual para que funcione en local y producción
+                const baseUrl = window.location.href.split('#')[0].replace('index.html', '').replace(/\/$/, '');
+                qrValue = `${baseUrl}/qr.html?${qrId}`; // URL más corta (sin id=)
+
+                this.storageManager.cargarMisQRs(auth.currentUser.uid);
+                Toast.show('QR Dinámico', 'QR inteligente generado y guardado.', 'success');
+            } catch (e) {
+                console.error("Error guardando QR:", e);
+                Toast.show('Error', 'No se pudo crear el QR dinámico. Se usará uno estático.', 'error');
+                // Fallback a WhatsApp directo si falla la base de datos
+                qrValue = `https://wa.me/${texto.replace(/[^0-9]/g, '')}`;
+            }
+        } else {
+            // Modo invitado: QR Estático directo a WhatsApp
+            qrValue = `https://wa.me/${texto.replace(/[^0-9]/g, '')}`;
+            Toast.show('QR Estático', 'Inicia sesión para crear QRs editables.', 'info');
+        }
+
+        // Generar QR visualmente
+        const qr = new window.QRious({
+            value: qrValue,
+            size: 500, // Alta resolución
+            foreground: color,
+            level: 'L' // Nivel L (Low) para menor densidad y mejor impresión en pequeño
+        });
+        const qrDataUrl = qr.toDataURL();
+
+        this.agregarQRAlCanvas(qrDataUrl, color, qrId, texto);
+    }
+
+    agregarQRGuardado(qrData) {
+        // Reconstruir la URL del QR dinámico usando el ID guardado
+        const baseUrl = window.location.href.split('#')[0].replace('index.html', '').replace(/\/$/, '');
+        // Usar shortId si existe, sino fallback al ID del documento (compatibilidad hacia atrás)
+        const qrId = qrData.shortId || qrData.id;
+        const qrUrl = `${baseUrl}/qr.html?${qrId}`; // URL más corta
+
+        const qr = new window.QRious({
+            value: qrUrl,
+            size: 500,
+            foreground: '#000000',
+            level: 'L' // Nivel L para consistencia
+        });
+        this.agregarQRAlCanvas(qr.toDataURL(), '#000000', qrData.id, qrData.telefono);
+    }
+
+    agregarQRAlCanvas(url, color, id, content) {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = url;
+        img.onload = () => {
+            this.agregarImagenAlCanvas(img);
+            // Ajustar propiedades del último elemento agregado (el QR)
+            const index = this.state.imagenesEnCanvas.length - 1;
+            const item = this.state.imagenesEnCanvas[index];
+            item.isQR = true;
+            item.qrId = id;
+            item.qrContent = content;
+            item.wBase = 100; // Tamaño base fijo para QRs
+            item.hBase = 100;
+            this.updatePreview();
+        };
     }
 
     descargarPDF() {

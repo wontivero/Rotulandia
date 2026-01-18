@@ -329,6 +329,7 @@ export class Toolbox {
         if (!container) return;
 
         const img = document.createElement('img');
+        img.crossOrigin = "Anonymous"; // FIX: Evitar error de seguridad al guardar
         img.alt = cat;
         img.addEventListener('click', () => {
             // Cerrar el modal correspondiente
@@ -380,6 +381,7 @@ export class Toolbox {
         if (!container) return;
         
         const img = document.createElement('img');
+        img.crossOrigin = "Anonymous"; // FIX: Evitar error de seguridad al guardar
         img.src = src;
         img.alt = cat === 'forma' ? 'forma' : 'Precargado';
         img.addEventListener('click', () => {
@@ -518,13 +520,13 @@ export class Toolbox {
             list.innerHTML = '<p class="text-muted text-center small">No tienes QRs activos.</p>';
             return;
         }
-        list.innerHTML = '';
+        list.innerHTML = '<p class="text-muted small mb-2 text-center">💡 Haz clic en un QR para agregarlo al diseño</p>';
         
         qrsData.forEach(qr => {
             const item = document.createElement('div');
             item.className = 'd-flex align-items-center justify-content-between p-2 border rounded bg-light';
             item.innerHTML = `
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-grow-1" style="cursor:pointer;" title="Click para agregar al diseño">
                     <span class="badge ${qr.activo !== false ? 'bg-success' : 'bg-warning'}">${qr.activo !== false ? 'Activo' : 'Pausado'}</span>
                     <span class="fw-bold small">${qr.nombre} ${qr.apellido}</span>
                     <span class="text-muted small">(${qr.telefono})</span>
@@ -532,6 +534,18 @@ export class Toolbox {
                 <button class="btn btn-sm btn-outline-primary btn-editar-qr" data-id="${qr.id}">✏️</button>
             `;
             
+            // Click en el texto para agregar al canvas
+            item.querySelector('div').addEventListener('click', () => {
+                this.callbacks.onAddQRToCanvas?.(qr);
+                
+                // Cerrar modal de lista para mejor UX
+                const modalEl = document.getElementById('modalMisQRs');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            });
+
             item.querySelector('.btn-editar-qr').addEventListener('click', () => {
                 // Disparar evento global para que StorageManager lo capture (ya que él tiene la lógica del modal de edición)
                 document.dispatchEvent(new CustomEvent('editar-qr', { detail: qr }));
