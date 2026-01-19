@@ -11,7 +11,30 @@ export default class EditorController {
         this.renderer = renderer;
         this.pdfGenerator = pdfGenerator;
         
+        // Definir defaults para inicialización y reset
+        this.defaults = {
+            nombre: '', apellido: '', grado: '',
+            plantilla: 'cuaderno',
+            tipoFondo: 'solido', colorFondo: '#E0F7FA',
+            colorDegradado1: '#ffffff', colorDegradado2: '#000000', // FIX: Defaults para evitar undefined en Firebase
+            tipoPatron: 'ninguno',
+            estiloBorde: 'simple', colorBorde: '#004D40', grosorBorde: 5,
+            fuenteNombre: "'Fredoka', sans-serif", colorNombre: '#004D40', tamanoNombre: 1.0,
+            fuenteGrado: "'Fredoka', sans-serif", colorGrado: '#004D40', tamanoGrado: 1.0,
+            checkArcoirisNombre: false, checkMetalNombre: false,
+            checkArcoirisGrado: false, checkMetalGrado: false,
+            checkArcoirisBorde: false, checkMetalBorde: false,
+            conBorde: false, conBorde2: false,
+            efectoTextoNombre: 'moderno', efectoTextoGrado: 'moderno',
+            efectoBorde: 'ninguno',
+            intensidadEfectoNombre: 5, intensidadEfectoGrado: 5, intensidadEfectoBorde: 5,
+            shiftArcoirisNombre: 0, shiftArcoirisGrado: 0, shiftArcoirisBorde: 0,
+            tipoMetalNombre: 0, tipoMetalGrado: 0, tipoMetalBorde: 0,
+            radioBorde: 10
+        };
+
         this.state = {
+            ...this.defaults, // Cargar defaults iniciales para evitar undefined
             imagenesEnCanvas: [],
             indiceImagenSeleccionada: -1,
             offsets: {},
@@ -78,10 +101,14 @@ export default class EditorController {
     }
 
     persistTextStyles() {
-        if (this.isUpdatingUI) return; // Si estamos actualizando la UI, no guardamos nada para evitar sobrescribir datos
-        if (this.state.selectedTextKey) {
+        if (this.isUpdatingUI || !this.toolbox) return; // FIX: Evitar error durante inicialización si toolbox no existe aún
+        
+        // FIX: Si no hay texto seleccionado, aplicamos los cambios a 'Nombre' por defecto para que los controles funcionen siempre
+        const targetKey = this.state.selectedTextKey || 'nombre_0';
+        
+        if (targetKey) {
             const rawValues = this.toolbox.getValues();
-            const type = this.state.selectedTextKey.split('_')[0];
+            const type = targetKey.split('_')[0];
             const suffix = (type === 'grado') ? 'Grado' : 'Nombre';
             
             this.state[`fuente${suffix}`] = rawValues.fuenteTexto;
@@ -92,6 +119,7 @@ export default class EditorController {
             this.state[`shiftArcoiris${suffix}`] = rawValues.shiftArcoirisTexto;
             this.state[`checkMetal${suffix}`] = rawValues.checkMetalTexto;
             this.state[`tipoMetal${suffix}`] = rawValues.tipoMetalTexto;
+            this.state[`tamano${suffix}`] = parseFloat(rawValues.tamanoTextoInput) || 1.0; // Guardar tamaño
         }
     }
 
@@ -103,6 +131,7 @@ export default class EditorController {
             if (user) {
                 this.storageManager.cargarMisFondos(user.uid);
                 this.storageManager.cargarMisFormas(user.uid);
+                this.storageManager.cargarMisPersonajes(user.uid); // Cargar personajes guardados
                 this.storageManager.cargarMisQRs(user.uid);
             }
         });
@@ -122,17 +151,18 @@ export default class EditorController {
             const suffix = (type === 'grado') ? 'Grado' : 'Nombre'; // Nombre y Apellido comparten estilo
             
             // Mapear inputs genéricos a props específicas
-            state[`fuente${suffix}`] = rawValues.fuenteTexto;
-            state[`color${suffix}`] = rawValues.colorTexto;
-            state[`efectoTexto${suffix}`] = rawValues.efectoTexto;
-            state[`intensidadEfecto${suffix}`] = rawValues.intensidadEfectoTexto;
-            state[`checkArcoiris${suffix}`] = rawValues.checkArcoirisTexto;
-            state[`shiftArcoiris${suffix}`] = rawValues.shiftArcoirisTexto;
-            state[`checkMetal${suffix}`] = rawValues.checkMetalTexto;
-            state[`tipoMetal${suffix}`] = rawValues.tipoMetalTexto;
+            // FIX: Verificar undefined antes de asignar para no sobrescribir defaults con valores vacíos
+            if (rawValues.fuenteTexto !== undefined) state[`fuente${suffix}`] = rawValues.fuenteTexto;
+            if (rawValues.colorTexto !== undefined) state[`color${suffix}`] = rawValues.colorTexto;
+            if (rawValues.efectoTexto !== undefined) state[`efectoTexto${suffix}`] = rawValues.efectoTexto;
+            if (rawValues.intensidadEfectoTexto !== undefined) state[`intensidadEfecto${suffix}`] = rawValues.intensidadEfectoTexto;
+            if (rawValues.checkArcoirisTexto !== undefined) state[`checkArcoiris${suffix}`] = rawValues.checkArcoirisTexto;
+            if (rawValues.shiftArcoirisTexto !== undefined) state[`shiftArcoiris${suffix}`] = rawValues.shiftArcoirisTexto;
+            if (rawValues.checkMetalTexto !== undefined) state[`checkMetal${suffix}`] = rawValues.checkMetalTexto;
+            if (rawValues.tipoMetalTexto !== undefined) state[`tipoMetal${suffix}`] = rawValues.tipoMetalTexto;
             
             // El tamaño se maneja via offsets, pero guardamos el valor base por si acaso
-            state[`tamano${suffix}`] = rawValues.tamanoTextoInput;
+            if (rawValues.tamanoTextoInput !== undefined) state[`tamano${suffix}`] = parseFloat(rawValues.tamanoTextoInput) || 1.0;
             
             // Actualizar offsets de escala en tiempo real
             // this.updateTextScale(type, rawValues.tamanoTextoInput); // ELIMINADO: Causaba recursión infinita
@@ -348,7 +378,24 @@ export default class EditorController {
     }
 
     generarColorRandom() {
-        const paletas = [{ c1: '#ff9a9e', c2: '#fecfef' }, { c1: '#84fab0', c2: '#8fd3f4' }]; // ... más paletas
+        const paletas = [
+            { c1: '#ff9a9e', c2: '#fecfef' }, // Lady Lips
+            { c1: '#a18cd1', c2: '#fbc2eb' }, // Morning Salad
+            { c1: '#fad0c4', c2: '#ffd1ff' }, // Warm Flame
+            { c1: '#ffecd2', c2: '#fcb69f' }, // Sunny Morning
+            { c1: '#84fab0', c2: '#8fd3f4' }, // Dusty Grass
+            { c1: '#a6c0fe', c2: '#f68084' }, // Itmeo Branding
+            { c1: '#fccb90', c2: '#d57eeb' }, // Perfect White
+            { c1: '#e0c3fc', c2: '#8ec5fc' }, // Deep Blue
+            { c1: '#43e97b', c2: '#38f9d7' }, // Grown Early
+            { c1: '#fa709a', c2: '#fee140' }, // True Sunset
+            { c1: '#00c6fb', c2: '#005bea' }, // Malibu Beach
+            { c1: '#6a11cb', c2: '#2575fc' }, // Deep Purple
+            { c1: '#f093fb', c2: '#f5576c' }, // Perfect Pink
+            { c1: '#4facfe', c2: '#00f2fe' }, // Blue Cyan
+            { c1: '#434343', c2: '#000000' }, // Black Metal
+            { c1: '#0ba360', c2: '#3cba92' }  // Green
+        ];
         const random = paletas[Math.floor(Math.random() * paletas.length)];
         this.toolbox.setValues({ colorDegradado1: random.c1, colorDegradado2: random.c2, colorFondo: random.c1 });
     }
@@ -492,6 +539,7 @@ export default class EditorController {
     resetearEditor() {
         // 1. Resetear Estado Interno
         this.state = {
+            ...this.defaults,
             imagenesEnCanvas: [],
             indiceImagenSeleccionada: -1,
             offsets: {},
@@ -506,25 +554,7 @@ export default class EditorController {
         }
 
         // 3. Resetear UI (Valores por defecto)
-        const defaults = {
-            nombre: '', apellido: '', grado: '',
-            plantilla: 'cuaderno',
-            tipoFondo: 'solido', colorFondo: '#E0F7FA',
-            tipoPatron: 'ninguno',
-            estiloBorde: 'simple', colorBorde: '#004D40', grosorBorde: 5,
-            fuenteNombre: "'Fredoka', sans-serif", colorNombre: '#004D40', tamanoNombre: 1.0,
-            fuenteGrado: "'Fredoka', sans-serif", colorGrado: '#004D40', tamanoGrado: 1.0,
-            checkArcoirisNombre: false, checkMetalNombre: false,
-            checkArcoirisGrado: false, checkMetalGrado: false,
-            checkArcoirisBorde: false, checkMetalBorde: false,
-            conBorde: false, conBorde2: false,
-            efectoTextoNombre: 'moderno', efectoTextoGrado: 'moderno',
-            efectoBorde: 'ninguno'
-        };
-        
-        // Guardar defaults en el estado interno también
-        Object.assign(this.state, defaults);
-        this.toolbox.setValues(defaults);
+        this.toolbox.setValues(this.defaults);
 
         // 4. Actualizar vista
         this.updatePreview();

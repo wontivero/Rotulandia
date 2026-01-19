@@ -45,15 +45,49 @@ h1, h2 {
     transition: all 0.3s ease;
 }
 
+/* Estilo para los selectores de color más grandes y visibles */
+.form-control-color {
+    width: 50px !important; /* Más ancho */
+    height: 38px !important; /* Más alto */
+    padding: 0.2rem !important;
+    border-radius: 8px !important;
+    cursor: pointer;
+}
+
+/* FIX: Estilo para el botón cuentagotas para que no se deforme */
+.btn-eyedropper {
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px !important;
+    flex-shrink: 0; /* Evita que se aplaste si falta espacio */
+}
+
 /* Estilo de pestañas modernas */
+.nav-pills {
+    background-color: #f1f3f5; /* Fondo gris suave para el grupo */
+    padding: 5px;
+    border-radius: 12px;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 5px !important;
+}
+
 .nav-pills .nav-link {
-    color: #555;
+    color: #6c757d;
     font-weight: 600;
+    border-radius: 8px !important; /* Bordes menos redondos, más modernos */
+    padding: 6px 16px;
+    transition: all 0.2s ease;
 }
 .nav-pills .nav-link.active {
     background-color: #3498db;
     color: white;
-    box-shadow: 0 2px 5px rgba(52, 152, 219, 0.4);
+    box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
+    transform: translateY(-1px);
 }
 
 .tool-label {

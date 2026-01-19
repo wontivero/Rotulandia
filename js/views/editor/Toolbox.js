@@ -43,7 +43,8 @@ export class Toolbox {
 
     toCamelCase(str) {
         // Convierte 'boton-descargar-pdf' -> 'botonDescargarPdf'
-        return str.replace(/-([a-z])/g, (g) => g[1].toUpperCase()).replace(/^input-/, '').replace(/^select-/, '').replace(/^btn-/, 'boton-');
+        // FIX: Agregar 0-9 a la expresión regular para que 'color-degradado-1' se convierta correctamente en 'colorDegradado1'
+        return str.replace(/-([a-z0-9])/g, (g) => g[1].toUpperCase()).replace(/^input-/, '').replace(/^select-/, '');
     }
 
     initEvents() {
@@ -65,9 +66,8 @@ export class Toolbox {
         inputEvents.forEach(key => {
             if (els[key]) {
                 els[key].addEventListener('input', () => this.notifyChange());
-                if(els[key].type === 'checkbox' || els[key].tagName === 'SELECT') {
-                    els[key].addEventListener('change', () => this.notifyChange());
-                }
+                // FIX: Escuchar 'change' también para asegurar que los selectores de color externos funcionen
+                els[key].addEventListener('change', () => this.notifyChange());
             }
         });
 
@@ -125,7 +125,10 @@ export class Toolbox {
             });
         });
 
-        if (els.colorForma) els.colorForma.addEventListener('input', (e) => this.callbacks.onShapePropChange?.('color', e.target.value));
+        if (els.colorForma) {
+            els.colorForma.addEventListener('input', (e) => this.callbacks.onShapePropChange?.('color', e.target.value));
+            els.colorForma.addEventListener('change', (e) => this.callbacks.onShapePropChange?.('color', e.target.value));
+        }
         if (els.opacidadForma) els.opacidadForma.addEventListener('input', (e) => this.callbacks.onShapePropChange?.('opacity', parseFloat(e.target.value)));
         if (els.btnEliminarForma) els.btnEliminarForma.addEventListener('click', () => this.callbacks.onDeleteImage?.()); // Reutilizamos delete image ya que funciona por índice
 
@@ -136,6 +139,9 @@ export class Toolbox {
         this.setupFileUpload(els.inputNuevoPersonajeModal, true);
         this.setupFileUpload(els.inputNuevoFormaToolbar, 'forma');
         this.setupFileUpload(els.inputNuevoFormaModal, 'forma');
+
+        // Inicializar Cuentagotas Nativo
+        this.initEyeDropper();
     }
 
     setupVisibilityLogic() {
@@ -312,6 +318,37 @@ export class Toolbox {
 
                     // Delegar la subida al controlador para manejar persistencia en la nube
                     this.callbacks.onUploadFile?.(file, cat);
+                }
+            });
+        });
+    }
+
+    initEyeDropper() {
+        const buttons = document.querySelectorAll('.btn-eyedropper');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault(); // Evitar cualquier comportamiento extraño del botón
+                
+                const targetId = btn.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                
+                if (!input) return;
+
+                if (window.EyeDropper) {
+                    try {
+                        const eyeDropper = new EyeDropper();
+                        const result = await eyeDropper.open();
+                        input.value = result.sRGBHex;
+                        // Disparar eventos para que el canvas se actualice
+                        input.dispatchEvent(new Event('input'));
+                        input.dispatchEvent(new Event('change'));
+                    } catch (e) {
+                        // El usuario canceló (presionó Esc), no hacemos nada
+                    }
+                } else {
+                    // Fallback para Firefox/Safari: Abrir el selector de color nativo del sistema
+                    input.click();
                 }
             });
         });

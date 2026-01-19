@@ -84,46 +84,46 @@ export class StorageManager {
             createdAt: serverTimestamp(),
             plantilla: state.plantilla,
             config: {
-                nombre: state.nombre,
-                apellido: state.apellido,
-                grado: state.grado,
-                colorFondo: state.colorFondo,
-                tipoFondo: state.tipoFondo,
-                tipoPatron: state.tipoPatron,
-                estiloBorde: state.estiloBorde,
-                colorBorde: state.colorBorde,
-                grosorBorde: state.grosorBorde,
-                arcoirisBorde: state.checkArcoirisBorde,
-                shiftArcoirisBorde: state.shiftArcoirisBorde,
-                metalBorde: state.checkMetalBorde,
-                tipoMetalBorde: state.tipoMetalBorde,
-                efectoBorde: state.efectoBorde,
-                intensidadEfectoBorde: state.intensidadEfectoBorde,
-                radioBorde: state.radioBorde,
-                fuenteNombre: state.fuenteNombre,
-                colorNombre: state.colorNombre,
-                arcoirisNombre: state.checkArcoirisNombre,
-                shiftArcoirisNombre: state.shiftArcoirisNombre,
-                metalNombre: state.checkMetalNombre,
-                tipoMetalNombre: state.tipoMetalNombre,
-                efectoTextoNombre: state.efectoTextoNombre,
-                intensidadEfectoNombre: state.intensidadEfectoNombre,
-                tamanoNombre: state.tamanoNombre,
-                fuenteGrado: state.fuenteGrado,
-                colorGrado: state.colorGrado,
-                arcoirisGrado: state.checkArcoirisGrado,
-                shiftArcoirisGrado: state.shiftArcoirisGrado,
-                metalGrado: state.checkMetalGrado,
-                tipoMetalGrado: state.tipoMetalGrado,
-                efectoTextoGrado: state.efectoTextoGrado,
-                intensidadEfectoGrado: state.intensidadEfectoGrado,
-                tamanoGrado: state.tamanoGrado,
-                colorDegradado1: state.colorDegradado1,
-                colorDegradado2: state.colorDegradado2,
-                conBorde: state.conBorde,
-                conBorde2: state.conBorde2,
-                offsets: state.offsets,
-                fondoProps: state.fondoProps,
+                nombre: state.nombre || '',
+                apellido: state.apellido || '',
+                grado: state.grado || '',
+                colorFondo: state.colorFondo || '#E0F7FA',
+                tipoFondo: state.tipoFondo || 'solido',
+                tipoPatron: state.tipoPatron || 'ninguno',
+                estiloBorde: state.estiloBorde || 'simple',
+                colorBorde: state.colorBorde || '#004D40',
+                grosorBorde: state.grosorBorde || 5,
+                arcoirisBorde: state.checkArcoirisBorde || false,
+                shiftArcoirisBorde: state.shiftArcoirisBorde || 0,
+                metalBorde: state.checkMetalBorde || false,
+                tipoMetalBorde: state.tipoMetalBorde || 0,
+                efectoBorde: state.efectoBorde || 'ninguno',
+                intensidadEfectoBorde: state.intensidadEfectoBorde || 5,
+                radioBorde: state.radioBorde || 10,
+                fuenteNombre: state.fuenteNombre || "'Fredoka', sans-serif",
+                colorNombre: state.colorNombre || '#000000',
+                arcoirisNombre: state.checkArcoirisNombre || false,
+                shiftArcoirisNombre: state.shiftArcoirisNombre || 0,
+                metalNombre: state.checkMetalNombre || false,
+                tipoMetalNombre: state.tipoMetalNombre || 0,
+                efectoTextoNombre: state.efectoTextoNombre || 'moderno',
+                intensidadEfectoNombre: state.intensidadEfectoNombre || 5,
+                tamanoNombre: state.tamanoNombre || 1.0,
+                fuenteGrado: state.fuenteGrado || "'Fredoka', sans-serif",
+                colorGrado: state.colorGrado || '#000000',
+                arcoirisGrado: state.checkArcoirisGrado || false,
+                shiftArcoirisGrado: state.shiftArcoirisGrado || 0,
+                metalGrado: state.checkMetalGrado || false,
+                tipoMetalGrado: state.tipoMetalGrado || 0,
+                efectoTextoGrado: state.efectoTextoGrado || 'moderno',
+                intensidadEfectoGrado: state.intensidadEfectoGrado || 5,
+                tamanoGrado: state.tamanoGrado || 1.0,
+                colorDegradado1: state.colorDegradado1 || '#ffffff',
+                colorDegradado2: state.colorDegradado2 || '#000000',
+                conBorde: state.conBorde || false,
+                conBorde2: state.conBorde2 || false,
+                offsets: state.offsets || {},
+                fondoProps: state.fondoProps || { x: 0, y: 0, scale: 1 },
             }
         };
 
@@ -150,13 +150,13 @@ export class StorageManager {
                     x: img.x,
                     y: img.y,
                     scale: img.scale,
-                    effect: img.effect,
+                    effect: img.effect || 'ninguno', // FIX: Evitar undefined
                     wBase: img.wBase,
                     hBase: img.hBase,
-                    type: img.type,
-                    shapeType: img.shapeType,
-                    opacity: img.opacity,
-                    color: img.color
+                    type: img.type || 'image',
+                    shapeType: img.shapeType || null, // FIX: Evitar undefined
+                    opacity: img.opacity !== undefined ? img.opacity : 1,
+                    color: img.color || null // FIX: Evitar undefined
                 };
             }));
             disenoData.config.imagenes = imagenesProcesadas;
@@ -254,6 +254,20 @@ export class StorageManager {
         }
     }
 
+    async cargarMisPersonajes(uid) {
+        try {
+            const q = query(collection(db, "mis_personajes"), where("uid", "==", uid), orderBy("createdAt", "desc"), limit(20));
+            const querySnapshot = await getDocs(q);
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                this.controller.toolbox.addToGallery(data.url, 'personaje', false);
+            });
+        } catch (error) {
+            console.error("Error cargando mis personajes:", error);
+        }
+    }
+
     async subirArchivoInmediato(file, category) {
         // category: 'fondo', 'personaje', 'forma'
         const user = auth.currentUser;
@@ -277,6 +291,12 @@ export class StorageManager {
             });
         } else if (category === 'forma') {
             await addDoc(collection(db, "mis_formas"), {
+                uid: user.uid,
+                url: url,
+                createdAt: serverTimestamp()
+            });
+        } else if (category === 'personaje') {
+            await addDoc(collection(db, "mis_personajes"), {
                 uid: user.uid,
                 url: url,
                 createdAt: serverTimestamp()

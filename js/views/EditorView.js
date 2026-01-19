@@ -19,13 +19,13 @@ export default class EditorView extends View {
             <div class="container-fluid py-2">
                 
                 <!-- NAVEGACIÓN POR PESTAÑAS -->
-                <ul class="nav nav-pills mb-2 gap-2" id="toolbar-tabs" role="tablist" style="font-size: 0.9rem;">
-                    <li class="nav-item" role="presentation"><button class="nav-link active rounded-pill px-3 py-1" id="tab-fondo-btn" data-bs-toggle="pill" data-bs-target="#panel-fondo" type="button">🎨 Fondo</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill px-3 py-1" id="tab-texto-btn" data-bs-toggle="pill" data-bs-target="#panel-texto" type="button">📝 Texto</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill px-3 py-1" id="tab-imagen-btn" data-bs-toggle="pill" data-bs-target="#panel-imagen" type="button">🦸 Personaje/Img</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill px-3 py-1" id="tab-formas-btn" data-bs-toggle="pill" data-bs-target="#panel-formas" type="button">🔷 Formas</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill px-3 py-1" id="tab-qr-btn" data-bs-toggle="pill" data-bs-target="#panel-qr" type="button">📱 QR</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link rounded-pill px-3 py-1" id="tab-borde-btn" data-bs-toggle="pill" data-bs-target="#panel-borde" type="button">🖼️ Borde</button></li>
+                <ul class="nav nav-pills mb-2" id="toolbar-tabs" role="tablist" style="font-size: 0.9rem;">
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-fondo-btn" data-bs-toggle="pill" data-bs-target="#panel-fondo" type="button">🎨 Fondo</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="tab-texto-btn" data-bs-toggle="pill" data-bs-target="#panel-texto" type="button">📝 Texto</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="tab-imagen-btn" data-bs-toggle="pill" data-bs-target="#panel-imagen" type="button">🦸 Personaje</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="tab-formas-btn" data-bs-toggle="pill" data-bs-target="#panel-formas" type="button">🔷 Formas</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="tab-qr-btn" data-bs-toggle="pill" data-bs-target="#panel-qr" type="button">📱 QR</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="tab-borde-btn" data-bs-toggle="pill" data-bs-target="#panel-borde" type="button">🖼️ Borde</button></li>
                 </ul>
 
                 <!-- CONTENIDO DE LAS PESTAÑAS -->
@@ -44,10 +44,19 @@ export default class EditorView extends View {
                                 <option value="transparente">Transparente</option>
                             </select>
                             <!-- Controles de color fondo -->
-                            <div id="control-color-solido" style="display:none;"><input type="color" id="color-fondo" class="form-control form-control-color form-control-sm"></div>
-                            <div id="control-color-degradado" style="display:none;" class="gap-1">
-                                <input type="color" id="color-degradado-1" class="form-control form-control-color form-control-sm">
-                                <input type="color" id="color-degradado-2" class="form-control form-control-color form-control-sm">
+                            <div id="control-color-solido" style="display:none;">
+                                <div class="d-flex gap-1 align-items-center">
+                                    <input type="color" id="color-fondo" class="form-control form-control-color form-control-sm">
+                                    <button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-fondo" title="Cuentagotas">🖊️</button>
+                                </div>
+                            </div>
+                            <div id="control-color-degradado" style="display:none;" class="gap-1 align-items-center">
+                                <div class="d-flex gap-1 align-items-center">
+                                    <input type="color" id="color-degradado-1" class="form-control form-control-color form-control-sm"><button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-degradado-1" title="Cuentagotas">🖊️</button>
+                                </div>
+                                <div class="d-flex gap-1 align-items-center">
+                                    <input type="color" id="color-degradado-2" class="form-control form-control-color form-control-sm"><button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-degradado-2" title="Cuentagotas">🖊️</button>
+                                </div>
                                 <button id="btn-random-gradient" class="btn btn-sm btn-light border">🎲</button>
                             </div>
                             <div id="control-imagen-fondo" style="display:none;" class="align-items-center gap-2">
@@ -107,7 +116,10 @@ export default class EditorView extends View {
                     <div class="d-flex flex-column justify-content-center">
                         <label class="tool-label">Color</label>
                         <div class="d-flex align-items-center gap-2">
-                            <input type="color" id="color-texto" class="form-control form-control-color form-control-sm" title="Color de Texto">
+                            <div class="d-flex gap-1 align-items-center">
+                                <input type="color" id="color-texto" class="form-control form-control-color form-control-sm" title="Color de Texto">
+                                <button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-texto" title="Cuentagotas">🖊️</button>
+                            </div>
                             <div class="form-check form-switch mb-0" title="Arcoíris">
                                 <input class="form-check-input" type="checkbox" id="check-arcoiris-texto">
                                 <label class="form-check-label small">🌈</label>
@@ -176,7 +188,10 @@ export default class EditorView extends View {
                             <div class="d-flex flex-column justify-content-center">
                                 <label class="tool-label">Estilo</label>
                                 <div class="d-flex gap-2 align-items-center">
-                                    <input type="color" id="color-forma" class="form-control form-control-color form-control-sm" value="#000000">
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <input type="color" id="color-forma" class="form-control form-control-color form-control-sm" value="#000000">
+                                        <button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-forma" title="Cuentagotas">🖊️</button>
+                                    </div>
                                     <div class="d-flex flex-column" style="width: 100px;">
                                         <label class="tool-label" style="font-size: 0.6rem;">Opacidad</label>
                                         <input type="range" id="opacidad-forma" class="form-range" min="0" max="1" step="0.1" value="1" style="margin: 0; height: 20px;">
@@ -238,7 +253,10 @@ export default class EditorView extends View {
                             </div>
                             <div class="d-flex flex-column justify-content-center">
                                 <label class="tool-label">Color</label>
-                                <div class="contenedor-color"><input type="color" id="color-qr" value="#000000" class="form-control form-control-color form-control-sm"></div>
+                                <div class="contenedor-color">
+                                    <input type="color" id="color-qr" value="#000000" class="form-control form-control-color form-control-sm">
+                                    <button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-qr" title="Cuentagotas">🖊️</button>
+                                </div>
                             </div>
                             <button id="btn-agregar-qr" class="btn btn-sm btn-primary d-flex align-items-center gap-1">Generar QR</button>
                             <div class="vr"></div>
@@ -250,8 +268,7 @@ export default class EditorView extends View {
                     <div class="tab-pane fade" id="panel-borde" role="tabpanel">
                         <div class="d-flex align-items-center gap-3 overflow-auto">
                             <div class="d-flex flex-column justify-content-center">
-                        <label class="tool-label">🖼️ Estilo</label>
-                        <div class="d-flex gap-1 align-items-center">
+                                <label class="tool-label">Estilo</label>
                             <select id="estilo-borde" class="form-select form-select-sm" style="width: 100px;">
                                 <option value="simple">Sólido</option>
                                 <option value="doble">Doble</option>
@@ -260,14 +277,22 @@ export default class EditorView extends View {
                                 <option value="sketch">Boceto</option>
                                 <option value="vintage">Vintage</option>
                             </select>
-                            <input type="color" id="color-borde" class="form-control form-control-color form-control-sm">
+                            </div>
+                            <div class="d-flex flex-column justify-content-center">
+                                <label class="tool-label">Color</label>
+                                <div class="contenedor-color">
+                                    <input type="color" id="color-borde" class="form-control form-control-color" title="Color del Borde">
+                                    <button type="button" class="btn btn-sm btn-light border btn-eyedropper" data-target="color-borde" title="Cuentagotas">🖊️</button>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column justify-content-center">
+                                <label class="tool-label">Grosor</label>
                             <input type="range" id="grosor-borde" class="form-range" min="1" max="20" style="width: 100px;" title="Grosor">
-                        </div>
-                    </div>
+                            </div>
 
                     <div class="vr"></div>
                     <div class="d-flex flex-column justify-content-center">
-                        <label class="tool-label">Efecto</label>
+                        <label class="tool-label">Material</label>
                         <div class="d-flex gap-2 align-items-center">
                             <div class="form-check form-switch mb-0" title="Arcoíris">
                                 <input class="form-check-input" type="checkbox" id="check-arcoiris-borde">
@@ -292,6 +317,21 @@ export default class EditorView extends View {
 
                     <div class="vr"></div>
                     <div class="d-flex flex-column justify-content-center">
+                        <label class="tool-label">Fx Visual</label>
+                        <div class="d-flex gap-2">
+                            <select id="efecto-borde" class="form-select form-select-sm" style="width: 110px;">
+                                <option value="ninguno">Ninguno</option>
+                                <option value="sombra_hard">Sombra Pop</option>
+                                <option value="sombra_soft">Sombra Suave</option>
+                                <option value="neon">Neón</option>
+                                <option value="glow">Resplandor</option>
+                            </select>
+                            <input type="range" id="intensidad-efecto-borde" class="form-range" min="1" max="20" style="width: 100px;" title="Intensidad">
+                        </div>
+                    </div>
+
+                    <div class="vr"></div>
+                    <div class="d-flex flex-column justify-content-center">
                         <label class="tool-label">Redondeo</label>
                         <div class="d-flex gap-2 align-items-center">
                             <div class="form-check mb-0">
@@ -307,9 +347,6 @@ export default class EditorView extends View {
                             </div>
                         </div>
                     </div>
-                    <!-- Inputs ocultos para compatibilidad -->
-                    <input type="hidden" id="efecto-borde" value="ninguno">
-                    <input type="hidden" id="intensidad-efecto-borde" value="5">
                         </div>
                     </div>
                 </div>
